@@ -50,11 +50,13 @@ has `NET_ADMIN`):
 docker exec devcontainer-wg-client-1 wg show
 ```
 
-## Secret Substitution
+## Settings
 
-Dev containers never see real secret values. Instead, env vars contain
-deterministic placeholders (`SANDCAT_PLACEHOLDER_<NAME>`), and the mitmproxy
-addon replaces them with real values when requests pass through the proxy.
+The sandcat addon (`sandcat_addon.py`) reads
+`~/.config/sandcat/settings.json` and provides two features:
+
+1. **Network access rules** — ordered allow/deny rules for outbound requests
+2. **Secret substitution** — placeholder replacement so dev containers never see real secrets
 
 ### Setup
 
@@ -62,21 +64,64 @@ addon replaces them with real values when requests pass through the proxy.
 
 ```sh
 mkdir -p ~/.config/sandcat
-cp .devcontainer/secrets.example.json ~/.config/sandcat/secrets.json
+cp .devcontainer/settings.example.json ~/.config/sandcat/settings.json
 ```
 
-2. Edit `~/.config/sandcat/secrets.json` with your real values:
+2. Edit `~/.config/sandcat/settings.json` with your real values:
 
 ```json
 {
-  "ANTHROPIC_API_KEY": {
-    "value": "sk-ant-real-key-here",
-    "hosts": ["api.anthropic.com"]
-  }
+  "secrets": {
+    "ANTHROPIC_API_KEY": {
+      "value": "sk-ant-real-key-here",
+      "hosts": ["api.anthropic.com"]
+    }
+  },
+  "network": [
+    {"action": "allow", "host": "*", "method": "GET"},
+    {"action": "allow", "host": "*.github.com", "method": "POST"},
+    {"action": "deny", "host": "*", "method": "POST"},
+    {"action": "allow", "host": "*"}
+  ]
 }
 ```
 
 3. Rebuild the dev container.
+
+## Network Access Rules
+
+The `network` array defines ordered access rules evaluated top-to-bottom.
+First matching rule wins (like iptables). If no rule matches, the request
+is **denied**.
+
+Each rule has:
+- `action` — `"allow"` or `"deny"` (required)
+- `host` — glob pattern via fnmatch (required)
+- `method` — HTTP method to match; omit to match any method (optional)
+
+### Example rules
+
+```json
+[
+  {"action": "allow", "host": "*", "method": "GET"},
+  {"action": "allow", "host": "*.github.com", "method": "POST"},
+  {"action": "deny", "host": "*", "method": "POST"},
+  {"action": "allow", "host": "*"}
+]
+```
+
+With these rules:
+- `GET` to any host → **allowed** (rule 1)
+- `POST` to `api.github.com` → **allowed** (rule 2)
+- `POST` to `example.com` → **denied** (rule 3)
+- `PUT` to any host → **allowed** (rule 4)
+- Empty network list → all requests **denied** (default deny)
+
+## Secret Substitution
+
+Dev containers never see real secret values. Instead, env vars contain
+deterministic placeholders (`SANDCAT_PLACEHOLDER_<NAME>`), and the mitmproxy
+addon replaces them with real values when requests pass through the proxy.
 
 Inside the container, `echo $ANTHROPIC_API_KEY` will print
 `SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY`. When a request containing that
@@ -112,9 +157,9 @@ accidental secret leakage to unintended services.
 
 ### How it works internally
 
-1. The mitmproxy container mounts `~/.config/sandcat/secrets.json`
-   (read-only) and the `substitute_secrets.py` addon script.
-2. On startup, the addon reads `secrets.json` and writes `placeholders.env`
+1. The mitmproxy container mounts `~/.config/sandcat/settings.json`
+   (read-only) and the `sandcat_addon.py` addon script.
+2. On startup, the addon reads `settings.json` and writes `placeholders.env`
    to the `mitmproxy-config` shared volume
    (`/home/mitmproxy/.mitmproxy/placeholders.env`). This file contains lines
    like `export ANTHROPIC_API_KEY="SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY"`.
@@ -122,16 +167,19 @@ accidental secret leakage to unintended services.
    `/mitmproxy-config/`. Their shared entrypoint (`container-entrypoint.sh`)
    sources `placeholders.env` after installing the CA cert, so every process
    gets the placeholder values as env vars.
-4. When a request containing a placeholder reaches mitmproxy, the addon
-   checks the destination host against the secret's allowlist and either
-   substitutes the real value or blocks the request with 403.
+4. On each request, the addon first checks network access rules. If denied,
+   the request is blocked with 403.
+5. If allowed, the addon checks for secret placeholders in the request,
+   verifies the destination host against the secret's allowlist, and either
+   substitutes the real value or blocks the request with 403 (leak detection).
 
 Real secrets never leave the mitmproxy container.
 
 ### Disabling
 
-Delete or rename `~/.config/sandcat/secrets.json`. If the file is absent,
-the addon disables itself and no placeholder env vars are set.
+Delete or rename `~/.config/sandcat/settings.json`. If the file is absent,
+the addon disables itself — no network rules are enforced and no placeholder
+env vars are set.
 
 ## Architecture
 
