@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/rust:2-1-trixie
 
-COPY scripts/install-ca-cert.sh /usr/local/bin/install-ca-cert.sh
-RUN chmod +x /usr/local/bin/install-ca-cert.sh
+COPY scripts/container-entrypoint.sh /usr/local/bin/container-entrypoint.sh
+RUN chmod +x /usr/local/bin/container-entrypoint.sh
 
-ENTRYPOINT ["/usr/local/bin/install-ca-cert.sh"]
+ENTRYPOINT ["/usr/local/bin/container-entrypoint.sh"]

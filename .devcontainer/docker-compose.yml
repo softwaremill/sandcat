@@ -40,11 +40,13 @@ services:
 
   mitmproxy:
     image: mitmproxy/mitmproxy:latest
-    command: mitmweb --mode wireguard --web-host 0.0.0.0 --set web_password=mitmproxy
+    command: mitmweb --mode wireguard --web-host 0.0.0.0 --set web_password=mitmproxy -s /scripts/substitute_secrets.py
     ports:
       - "8081:8081"    # mitmweb UI for inspecting intercepted traffic
     volumes:
       - mitmproxy-config:/home/mitmproxy/.mitmproxy
+      - ./scripts/substitute_secrets.py:/scripts/substitute_secrets.py:ro
+      - ~/.config/sandcat/secrets.json:/secrets/secrets.json:ro
     cap_add:
       - NET_ADMIN
     healthcheck:

@@ -1,12 +1,15 @@
 FROM debian:trixie-slim
 
-#   ca-certificates - system CA store, needed for update-ca-certificates
-#   curl           - for manual testing of the proxy setup
+#   ca-certificates    - system CA store, needed for update-ca-certificates
+#   curl, git, gh, vim - for manual testing of the proxy setup
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && apt-get install -y --no-install-recommends ca-certificates curl git gh vim \
     && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/install-ca-cert.sh /usr/local/bin/install-ca-cert.sh
-RUN chmod +x /usr/local/bin/install-ca-cert.sh
+RUN curl -fsSL https://claude.ai/install.sh | bash
+ENV PATH="/root/.local/bin:$PATH"
 
-ENTRYPOINT ["/usr/local/bin/install-ca-cert.sh"]
+COPY scripts/container-entrypoint.sh /usr/local/bin/container-entrypoint.sh
+RUN chmod +x /usr/local/bin/container-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/container-entrypoint.sh"]

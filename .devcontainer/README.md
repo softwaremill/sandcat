@@ -50,6 +50,89 @@ has `NET_ADMIN`):
 docker exec devcontainer-wg-client-1 wg show
 ```
 
+## Secret Substitution
+
+Dev containers never see real secret values. Instead, env vars contain
+deterministic placeholders (`SANDCAT_PLACEHOLDER_<NAME>`), and the mitmproxy
+addon replaces them with real values when requests pass through the proxy.
+
+### Setup
+
+1. Create the config file:
+
+```sh
+mkdir -p ~/.config/sandcat
+cp .devcontainer/secrets.example.json ~/.config/sandcat/secrets.json
+```
+
+2. Edit `~/.config/sandcat/secrets.json` with your real values:
+
+```json
+{
+  "ANTHROPIC_API_KEY": {
+    "value": "sk-ant-real-key-here",
+    "hosts": ["api.anthropic.com"]
+  }
+}
+```
+
+3. Rebuild the dev container.
+
+Inside the container, `echo $ANTHROPIC_API_KEY` will print
+`SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY`. When a request containing that
+placeholder reaches mitmproxy, it's replaced with the real key — but only
+if the destination host matches the `hosts` allowlist.
+
+### Claude Code
+
+Claude Code requires onboarding before it will use an API key from the
+environment. To skip the browser-based login flow, create `~/.claude.json`
+inside the container:
+
+```json
+{"hasCompletedOnboarding": true}
+```
+
+With this in place and `ANTHROPIC_API_KEY` set (via secret substitution),
+Claude Code will use the key directly.
+
+### Host patterns
+
+The `hosts` field accepts glob patterns via `fnmatch`:
+
+- `"api.anthropic.com"` — exact match
+- `"*.anthropic.com"` — any subdomain
+- `"*"` — allow all hosts (use with caution)
+
+### Leak detection
+
+If a placeholder appears in a request to a host **not** in the allowlist,
+mitmproxy blocks the request with HTTP 403 and logs a warning. This prevents
+accidental secret leakage to unintended services.
+
+### How it works internally
+
+1. The mitmproxy container mounts `~/.config/sandcat/secrets.json`
+   (read-only) and the `substitute_secrets.py` addon script.
+2. On startup, the addon reads `secrets.json` and writes `placeholders.env`
+   to the `mitmproxy-config` shared volume
+   (`/home/mitmproxy/.mitmproxy/placeholders.env`). This file contains lines
+   like `export ANTHROPIC_API_KEY="SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY"`.
+3. The rust and test containers mount `mitmproxy-config` read-only at
+   `/mitmproxy-config/`. Their shared entrypoint (`container-entrypoint.sh`)
+   sources `placeholders.env` after installing the CA cert, so every process
+   gets the placeholder values as env vars.
+4. When a request containing a placeholder reaches mitmproxy, the addon
+   checks the destination host against the secret's allowlist and either
+   substitutes the real value or blocks the request with 403.
+
+Real secrets never leave the mitmproxy container.
+
+### Disabling
+
+Delete or rename `~/.config/sandcat/secrets.json`. If the file is absent,
+the addon disables itself and no placeholder env vars are set.
+
 ## Architecture
 
 ```
