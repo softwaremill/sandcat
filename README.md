@@ -176,7 +176,6 @@ up the API key from secret substitution without manual setup.
 │   app        │ ──────────── │  wg-client   │ ─────────── │  mitmproxy   │ ── internet
 │ (no NET_ADMIN)              │  (NET_ADMIN) │             │  (mitmweb)   │
 └──────────────┘              └──────────────┘             └──────────────┘
-                                                             localhost:8081
                                                              pw: mitmproxy
 ```
 
@@ -190,8 +189,9 @@ up the API key from secret substitution without manual setup.
   `network_mode`. They inherit the tunnel and firewall rules but cannot
   modify them (no `NET_ADMIN`). They install the mitmproxy CA cert into
   the system trust store at startup so TLS interception works.
-- The mitmproxy web UI on port 8081 shows all intercepted traffic
-  (password: `mitmproxy`).
+- The mitmproxy web UI is exposed on a dynamic host port (see below)
+  to avoid conflicts when multiple projects include sandcat. Password:
+  `mitmproxy`.
 
 ## Testing the proxy
 
@@ -213,8 +213,14 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com
 curl https://httpbin.org/get
 ```
 
-Then open http://localhost:8081 and log in with password `mitmproxy` to
-confirm the requests show up in the web UI.
+Then open the mitmproxy web UI to confirm the requests show up. The host
+port is assigned dynamically — look it up from a host terminal with:
+
+```sh
+docker compose -f .devcontainer/compose.yml port mitmproxy 8081
+```
+
+Or using Docker's UI. Log in with password `mitmproxy`.
 
 To verify the kill switch blocks direct traffic:
 
