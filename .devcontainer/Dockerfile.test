@@ -9,7 +9,7 @@ RUN apt-get update \
 RUN curl -fsSL https://claude.ai/install.sh | bash
 ENV PATH="/root/.local/bin:$PATH"
 
-COPY scripts/container-entrypoint.sh /usr/local/bin/container-entrypoint.sh
-RUN chmod +x /usr/local/bin/container-entrypoint.sh
+COPY scripts/sandcat-init.sh /usr/local/bin/sandcat-init.sh
+RUN chmod +x /usr/local/bin/sandcat-init.sh
 
-ENTRYPOINT ["/usr/local/bin/container-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/sandcat-init.sh"]

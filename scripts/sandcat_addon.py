@@ -20,7 +20,6 @@ PLACEHOLDERS_ENV_PATH = "/home/mitmproxy/.mitmproxy/placeholders.env"
 
 logger = logging.getLogger(__name__)
 
-
 class SandcatAddon:
     def __init__(self):
         self.secrets: dict[str, dict] = {}  # name -> {value, hosts, placeholder}
@@ -71,7 +70,7 @@ class SandcatAddon:
             if rule_method is not None and rule_method.upper() != method.upper():
                 continue
             return rule["action"] == "allow"
-        return False  # default deny
+        return False # default deny
 
     def _substitute_secrets(self, flow: http.HTTPFlow):
         host = flow.request.pretty_host

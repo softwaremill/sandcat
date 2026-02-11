@@ -1,6 +1,6 @@
 {
 	"name": "Rust",
-	"dockerComposeFile": "docker-compose.yml",
+	"dockerComposeFile": "compose.yml",
 	"service": "rust",
 	"workspaceFolder": "/workspaces/sandcat",
 	"features": {

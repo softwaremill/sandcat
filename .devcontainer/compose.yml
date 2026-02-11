@@ -1,0 +1,37 @@
+include:
+  - path: ../compose.yml
+
+services:
+  rust:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    # Share wg-client's network namespace so all traffic goes through its
+    # WireGuard tunnel. The rust container has no NET_ADMIN capability,
+    # so processes inside cannot modify routing, iptables, or the tunnel.
+    network_mode: "service:wg-client"
+    volumes:
+      - ..:/workspaces/sandcat:cached
+      - rust-home:/home/vscode
+      - mitmproxy-config:/mitmproxy-config:ro
+    command: sleep infinity
+    depends_on:
+      wg-client:
+        condition: service_healthy
+
+  # Lightweight container for manually testing the proxy setup.
+  # Uses a compose profile so it doesn't start with the dev container.
+  test:
+    profiles: ["test"]
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.test
+    network_mode: "service:wg-client"
+    volumes:
+      - mitmproxy-config:/mitmproxy-config:ro
+    depends_on:
+      wg-client:
+        condition: service_healthy
+
+volumes:
+  rust-home:

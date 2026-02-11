@@ -1,6 +1,0 @@
-FROM mcr.microsoft.com/devcontainers/rust:2-1-trixie
-
-COPY scripts/container-entrypoint.sh /usr/local/bin/container-entrypoint.sh
-RUN chmod +x /usr/local/bin/container-entrypoint.sh
-
-ENTRYPOINT ["/usr/local/bin/container-entrypoint.sh"]
