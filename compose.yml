@@ -25,7 +25,7 @@ services:
     image: mitmproxy/mitmproxy:latest
     command: mitmweb --mode wireguard --web-host 0.0.0.0 --set web_password=mitmproxy -s /scripts/sandcat_addon.py
     ports:
-      - "8081:8081" # mitmweb UI for inspecting intercepted traffic
+      - "8081" # mitmweb UI; host port assigned dynamically to avoid conflicts
     volumes:
       - mitmproxy-config:/home/mitmproxy/.mitmproxy
       - ./scripts/sandcat_addon.py:/scripts/sandcat_addon.py:ro
