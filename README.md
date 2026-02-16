@@ -24,7 +24,7 @@ cp settings.example.json ~/.config/sandcat/settings.json
 Then start the built-in test container to verify everything works:
 
 ```sh
-docker compose -f .devcontainer/compose.yml --profile test run --rm test bash
+docker compose -f .devcontainer/compose.yml --profile test run --rm --build test bash
 ```
 
 Inside the container:
@@ -54,11 +54,10 @@ Your `.devcontainer/` directory should end up looking like this:
 ├── sandcat/              # the submodule
 │   ├── compose.yml       # mitmproxy + wg-client services
 │   ├── scripts/
-│   │   ├── sandcat-init.sh       # entrypoint for app containers
+│   │   ├── sandcat-init.sh       # entrypoint for app containers (root)
+│   │   ├── sandcat-user-init.sh  # vscode-user tasks (git identity, CLI update)
 │   │   ├── sandcat_addon.py      # mitmproxy addon (network rules + secret substitution)
-│   │   ├── start-wireguard.sh    # wg-client entrypoint
-│   │   ├── post-create.sh        # one-time setup (onboarding, git identity)
-│   │   └── post-start.sh         # runs on every start (updates Claude CLI)
+│   │   └── start-wireguard.sh    # wg-client entrypoint
 │   └── settings.example.json
 ├── compose.yml           # your project's compose file (includes sandcat)
 ├── Dockerfile            # your app container image
@@ -106,15 +105,32 @@ project needs and use `sandcat-init.sh` as the entrypoint:
 
 ```dockerfile
 FROM mcr.microsoft.com/devcontainers/javascript-node:22
-# Install your project's tooling here
-COPY sandcat/scripts/sandcat-init.sh /usr/local/bin/sandcat-init.sh
-RUN chmod +x /usr/local/bin/sandcat-init.sh
-ENTRYPOINT ["sandcat-init.sh"]
+
+# gosu is used by the entrypoint to drop privileges.
+# ca-certificates, curl, git are already in devcontainer base images.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --chmod=755 sandcat/scripts/sandcat-init.sh /usr/local/bin/sandcat-init.sh
+COPY --chmod=755 sandcat/scripts/sandcat-user-init.sh /usr/local/bin/sandcat-user-init.sh
+
+USER vscode
+
+# Install Claude Code and seed onboarding so it uses the API key
+# from secret substitution without interactive setup.
+RUN npm install -g @anthropic-ai/claude-code
+RUN mkdir -p /home/vscode/.claude \
+    && echo '{"hasCompletedOnboarding":true}' > /home/vscode/.claude.json
+
+USER root
+ENTRYPOINT ["/usr/local/bin/sandcat-init.sh"]
 ```
 
 The entrypoint installs the mitmproxy CA certificate into the system
-trust store and loads placeholder environment variables for secret
-substitution before handing off to the container's main command.
+trust store, loads placeholder environment variables for secret
+substitution, and drops to the `vscode` user before running the
+container's main command.
 
 See [`.devcontainer/Dockerfile`](.devcontainer/Dockerfile) in this
 repo for a working example (Rust development).
@@ -228,8 +244,7 @@ placeholder env vars are set.
 Claude Code ignores `ANTHROPIC_API_KEY` until onboarding is complete.
 Without `{"hasCompletedOnboarding": true}` in `~/.claude.json`, it
 prompts for browser-based login instead of using the key. The dev
-container automatically sets this on startup (via
-`scripts/post-create.sh`) if not already present, so Claude Code picks
+container Dockerfile sets this during the build, so Claude Code picks
 up the API key from secret substitution without manual setup.
 
 **Autonomous mode.** The bundled `devcontainer.json` enables
@@ -325,8 +340,9 @@ to the `env` section of your `settings.json`:
 ```
 
 The mitmproxy addon writes `env` entries to the shared env file
-(alongside secret placeholders), and `post-create.sh` applies
-`GIT_USER_NAME`/`GIT_USER_EMAIL` via `git config --global`.
+(alongside secret placeholders), and `sandcat-user-init.sh` applies
+`GIT_USER_NAME`/`GIT_USER_EMAIL` via `git config --global` at container
+startup.
 
 **HTTPS remotes only.** With `SSH_AUTH_SOCK` cleared, SSH-based git
 remotes will not work. Use HTTPS URLs instead — sandcat's secret
@@ -415,8 +431,8 @@ runtime instead.
 ## Commercial Support
 
 We offer commercial services around AI-assisted software development.
-[Contact us](https://softwaremill.com) to learn more about our offer!
+[Contact us](https://virtuslab.com) to learn more about our offer!
 
 ## Copyright
 
-Copyright (C) 2026 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2026 VirtusLab [https://virtuslab.com](https://virtuslab.com).

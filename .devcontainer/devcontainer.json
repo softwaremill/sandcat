@@ -3,12 +3,6 @@
 	"dockerComposeFile": "compose.yml",
 	"service": "rust",
 	"workspaceFolder": "/workspaces/sandcat",
-	"features": {
-		"ghcr.io/devcontainers-extra/features/claude-code:1": {}
-	},
-	"postCreateCommand": "bash scripts/post-create.sh",
-	// Update Claude Code CLI on every container start (not just first create).
-	"postStartCommand": "bash scripts/post-start.sh",
 	// VS Code forwards host credential sockets into containers by default.
 	// Clear them so container code cannot use host SSH keys, GPG signing,
 	// or VS Code's git credential helpers to authenticate as the host user.
