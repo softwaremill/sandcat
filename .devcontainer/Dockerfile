@@ -22,6 +22,11 @@ ENV PATH="/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:$PATH"
 RUN mise use -g node@lts \
     && npm install -g @anthropic-ai/claude-code
 
+# Add your language toolchain here, e.g.:
+#   RUN mise use -g python@3.13
+#   RUN mise use -g rust@latest
+#   RUN mise use -g java@21
+
 # Pre-create the Claude config directory and seed onboarding flag so Claude
 # Code can use an API key from the environment without interactive setup.
 RUN mkdir -p /home/vscode/.claude \

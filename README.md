@@ -135,6 +135,22 @@ container's main command.
 See [`.devcontainer/Dockerfile`](.devcontainer/Dockerfile) in this
 repo for a working example.
 
+### Adapting the Dockerfile for your stack
+
+The bundled Dockerfile uses [mise](https://mise.jdx.dev/) to manage
+language toolchains. Add `mise use -g` lines to the marked placeholder
+in the Dockerfile to install what you need:
+
+| Stack | mise command |
+|-------|-------------|
+| TypeScript / Node.js | `mise use -g node@lts` (already installed) |
+| Python | `mise use -g python@3.13` |
+| Rust | `mise use -g rust@latest` |
+| Java | `mise use -g java@21` |
+
+Some runtimes need extra configuration to trust the mitmproxy CA — see
+[TLS and CA certificates](#tls-and-ca-certificates).
+
 ## Settings format
 
 `~/.config/sandcat/settings.json`:
@@ -267,13 +283,20 @@ an empty directory in its place.
 
 ## Architecture
 
-```
-                network_mode
-┌──────────────┐  shares net  ┌──────────────┐  WG tunnel  ┌──────────────┐
-│   app        │ ──────────── │  wg-client   │ ─────────── │  mitmproxy   │ ── internet
-│ (no NET_ADMIN)              │  (NET_ADMIN) │             │  (mitmweb)   │
-└──────────────┘              └──────────────┘             └──────────────┘
-                                                             pw: mitmproxy
+```mermaid
+flowchart LR
+    app["<b>app</b><br/><i>no NET_ADMIN</i><br/>your code runs here"]
+    wg["<b>wg-client</b><br/><i>NET_ADMIN</i><br/>WireGuard + iptables"]
+    mitm["<b>mitmproxy</b><br/><i>mitmweb</i><br/>network rules &amp;<br/>secret substitution"]
+    inet(("internet"))
+
+    app -- "network_mode:<br/>shares net namespace" --- wg
+    wg -- "WireGuard<br/>tunnel" --> mitm
+    mitm -- "allowed<br/>requests" --> inet
+
+    style app fill:#e8f4fd,stroke:#4a90d9
+    style wg fill:#fdf2e8,stroke:#d9904a
+    style mitm fill:#e8fde8,stroke:#4ad94a
 ```
 
 - **mitmproxy** runs `mitmweb --mode wireguard`, creating a WireGuard
@@ -414,19 +437,30 @@ fails in Docker because `/proc/sys` is read-only. The equivalent sysctl
 is set via the `sysctls` option in `compose.yml`, and the entrypoint
 script handles interface, routing, and firewall setup manually.
 
-### Node.js TLS
+### TLS and CA certificates
 
-Node.js bundles its own CA certificates and ignores the system trust
-store. The `sandcat-init.sh` entrypoint sets `NODE_EXTRA_CA_CERTS` to
-the mitmproxy CA automatically. If you write a custom entrypoint, make
-sure to include this or Node-based tools will fail TLS verification.
+Sandcat's mitmproxy intercepts TLS traffic, so the app container must
+trust the mitmproxy CA. `sandcat-init.sh` installs it into the system
+trust store, which is enough for most tools — but some runtimes bring
+their own CA handling:
 
-### Rust TLS
-
-Rust programs using `rustls` with the `webpki-roots` crate bundle CA
-certificates at compile time and will not trust the mitmproxy CA. Use
-`rustls-tls-native-roots` in reqwest so it reads the system CA store at
-runtime instead.
+- **Node.js** bundles its own CA certificates and ignores the system
+  store. `sandcat-init.sh` sets `NODE_EXTRA_CA_CERTS` automatically. If
+  you write a custom entrypoint, make sure to include this or Node-based
+  tools will fail TLS verification.
+- **Rust** programs using `rustls` with the `webpki-roots` crate bundle
+  CA certificates at compile time and will not trust the mitmproxy CA.
+  Use `rustls-tls-native-roots` in reqwest so it reads the system CA
+  store at runtime instead.
+- **Java** uses its own trust store (`cacerts`). Import the mitmproxy CA
+  at runtime by adding this to `sandcat-init.sh` or a wrapper script
+  before the `exec` line:
+  ```sh
+  keytool -importcert -trustcacerts -noprompt \
+    -alias mitmproxy -file /mitmproxy-config/mitmproxy-ca-cert.pem \
+    -keystore "$JAVA_HOME/lib/security/cacerts" -storepass changeit
+  ```
+- **Python** uses the system CA store — works out of the box.
 
 ## Commercial Support
 
