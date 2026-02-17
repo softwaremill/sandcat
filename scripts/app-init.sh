@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # Entrypoint for containers that share the wg-client's network namespace.
-# Installs the mitmproxy CA cert and loads placeholder env vars for secret
-# substitution before handing off to the container's main command.
+# Installs the mitmproxy CA cert, loads env vars and secret placeholders
+# from sandcat.env, then hands off to the container's main command.
 #
 set -e
 
@@ -29,18 +29,18 @@ update-ca-certificates
 export NODE_EXTRA_CA_CERTS="$CA_CERT"
 echo "export NODE_EXTRA_CA_CERTS=\"$CA_CERT\"" > /etc/profile.d/sandcat-node-ca.sh
 
-# Source placeholder env vars for secret substitution (if available)
-PLACEHOLDERS_ENV="/mitmproxy-config/placeholders.env"
-if [ -f "$PLACEHOLDERS_ENV" ]; then
-    . "$PLACEHOLDERS_ENV"
-    # Make placeholders available to new shells (e.g. VS Code terminals in dev
+# Source env vars and secret placeholders (if available)
+SANDCAT_ENV="/mitmproxy-config/sandcat.env"
+if [ -f "$SANDCAT_ENV" ]; then
+    . "$SANDCAT_ENV"
+    # Make vars available to new shells (e.g. VS Code terminals in dev
     # containers) that won't inherit the entrypoint's environment.
-    cp "$PLACEHOLDERS_ENV" /etc/profile.d/sandcat-placeholders.sh
-    count=$(grep -c '^export ' "$PLACEHOLDERS_ENV" 2>/dev/null || echo 0)
-    echo "Loaded $count secret placeholder(s) from $PLACEHOLDERS_ENV"
-    grep '^export ' "$PLACEHOLDERS_ENV" | sed 's/=.*//' | sed 's/^export /  /'
+    cp "$SANDCAT_ENV" /etc/profile.d/sandcat-env.sh
+    count=$(grep -c '^export ' "$SANDCAT_ENV" 2>/dev/null || echo 0)
+    echo "Loaded $count env var(s) from $SANDCAT_ENV"
+    grep '^export ' "$SANDCAT_ENV" | sed 's/=.*//' | sed 's/^export /  /'
 else
-    echo "No $PLACEHOLDERS_ENV found — secret substitution disabled"
+    echo "No $SANDCAT_ENV found — env vars and secret substitution disabled"
 fi
 
 # Run vscode-user tasks: git identity and Claude Code update.

@@ -81,7 +81,7 @@ services:
       - ..:/workspaces/project:cached
       # Named volume so user-level config persists across rebuilds.
       - app-home:/home/vscode
-      # CA cert and placeholder env vars for secret substitution.
+      # CA cert, env vars, and secret placeholders.
       - mitmproxy-config:/mitmproxy-config:ro
       # Host Claude Code customizations (remove if files don't exist).
       - ~/.claude/CLAUDE.md:/home/vscode/.claude/CLAUDE.md:ro
@@ -98,7 +98,7 @@ volumes:
 
 The key parts: `network_mode: "service:wg-client"` routes all traffic
 through the WireGuard tunnel, and the `mitmproxy-config` volume gives
-your container access to the CA cert and placeholder env vars.
+your container access to the CA cert, env vars, and secret placeholders.
 
 In your `.devcontainer/Dockerfile`, install whatever dev tooling your
 project needs and use `app-init.sh` as the entrypoint:
@@ -128,8 +128,8 @@ ENTRYPOINT ["/usr/local/bin/app-init.sh"]
 ```
 
 The entrypoint installs the mitmproxy CA certificate into the system
-trust store, loads placeholder environment variables for secret
-substitution, and drops to the `vscode` user before running the
+trust store, loads environment variables and secret placeholders from
+`sandcat.env`, and drops to the `vscode` user before running the
 container's main command.
 
 See [`.devcontainer/Dockerfile`](.devcontainer/Dockerfile) in this
@@ -233,13 +233,14 @@ prevents accidental secret leakage to unintended services.
 1. The mitmproxy container mounts `~/.config/sandcat/settings.json`
    (read-only) and the `mitmproxy_addon.py` addon script.
 2. On startup, the addon reads `settings.json` and writes
-   `placeholders.env` to the `mitmproxy-config` shared volume
-   (`/home/mitmproxy/.mitmproxy/placeholders.env`). This file contains
-   lines like `export ANTHROPIC_API_KEY="SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY"`.
+   `sandcat.env` to the `mitmproxy-config` shared volume
+   (`/home/mitmproxy/.mitmproxy/sandcat.env`). This file contains
+   plain env vars (e.g. `export GIT_USER_NAME="Your Name"`) and
+   secret placeholders (e.g. `export ANTHROPIC_API_KEY="SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY"`).
 3. App containers mount `mitmproxy-config` read-only at
    `/mitmproxy-config/`. The shared entrypoint (`app-init.sh`)
-   sources `placeholders.env` after installing the CA cert, so every
-   process gets the placeholder values as env vars.
+   sources `sandcat.env` after installing the CA cert, so every
+   process gets the env vars and placeholder values.
 4. On each request, the addon first checks network access rules. If
    denied, the request is blocked with 403.
 5. If allowed, the addon checks for secret placeholders in the request,
@@ -252,8 +253,8 @@ Real secrets never leave the mitmproxy container.
 ### Disabling
 
 Delete or rename `~/.config/sandcat/settings.json`. If the file is
-absent, the addon disables itself — no network rules are enforced and no
-placeholder env vars are set.
+absent, the addon disables itself — no network rules are enforced and
+`sandcat.env` is not written.
 
 ### Claude Code
 
@@ -323,7 +324,7 @@ bind-mounts from the host:
 ```mermaid
 flowchart TB
     subgraph volumes["Shared volumes"]
-        mc["<b>mitmproxy-config</b><br/><i>wireguard.conf</i><br/><i>mitmproxy-ca-cert.pem</i><br/><i>placeholders.env</i>"]
+        mc["<b>mitmproxy-config</b><br/><i>wireguard.conf</i><br/><i>mitmproxy-ca-cert.pem</i><br/><i>sandcat.env</i>"]
         ah["<b>app-home</b><br/><i>/home/vscode</i><br/>persists Claude Code state,<br/>shell history across rebuilds"]
     end
 
@@ -346,8 +347,8 @@ flowchart TB
 ```
 
 - **`mitmproxy-config`** is the key shared volume. Mitmproxy writes to
-  it (WireGuard keys, CA cert, `placeholders.env`); all other
-  containers mount it read-only.
+  it (WireGuard keys, CA cert, `sandcat.env` with env vars and secret
+  placeholders); all other containers mount it read-only.
 - **`app-home`** persists the vscode user's home directory across
   container rebuilds (Claude Code auth, shell history, git config).
 - **`settings.json`** is bind-mounted from the host into mitmproxy
@@ -370,7 +371,7 @@ sequenceDiagram
     M->>M: Start WireGuard server
     M->>M: Generate wireguard.conf (key pairs)
     M->>M: Read settings.json
-    M->>M: Write placeholders.env
+    M->>M: Write sandcat.env (env vars + secret placeholders)
     M->>M: Write mitmproxy-ca-cert.pem
     Note over M: healthcheck passes<br/>(wireguard.conf exists)
 
@@ -386,7 +387,7 @@ sequenceDiagram
     A->>A: Read CA cert from shared volume
     A->>A: Install CA into system trust store
     A->>A: Set NODE_EXTRA_CA_CERTS
-    A->>A: Source placeholders.env (secret placeholders)
+    A->>A: Source sandcat.env (env vars + secret placeholders)
     A->>A: Run app-user-init.sh (git identity, etc.)
     A->>A: Drop to vscode user, exec main command
     Note over A: ready for use

@@ -265,7 +265,7 @@ class TestConfigLoading:
         p.write_text(json.dumps(settings))
         addon = SandcatAddon()
         with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
-             patch("mitmproxy_addon.PLACEHOLDERS_ENV_PATH", str(tmp_path / "placeholders.env")):
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(tmp_path / "sandcat.env")):
             addon.load(MagicMock())
         assert addon.secrets == {}
         assert len(addon.network_rules) == 1
@@ -278,7 +278,7 @@ class TestConfigLoading:
         p.write_text(json.dumps(settings))
         addon = SandcatAddon()
         with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
-             patch("mitmproxy_addon.PLACEHOLDERS_ENV_PATH", str(tmp_path / "placeholders.env")):
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(tmp_path / "sandcat.env")):
             addon.load(MagicMock())
         assert len(addon.secrets) == 1
         assert addon.network_rules == []
@@ -290,10 +290,10 @@ class TestConfigLoading:
         }}
         p = tmp_path / "settings.json"
         p.write_text(json.dumps(settings))
-        env_path = tmp_path / "placeholders.env"
+        env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
         with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
-             patch("mitmproxy_addon.PLACEHOLDERS_ENV_PATH", str(env_path)):
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
         assert 'export A="SANDCAT_PLACEHOLDER_A"' in content
@@ -306,10 +306,10 @@ class TestConfigLoading:
         }
         p = tmp_path / "settings.json"
         p.write_text(json.dumps(settings))
-        env_path = tmp_path / "placeholders.env"
+        env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
         with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
-             patch("mitmproxy_addon.PLACEHOLDERS_ENV_PATH", str(env_path)):
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
         assert 'export GIT_USER_NAME="Alice"' in content
@@ -320,10 +320,10 @@ class TestConfigLoading:
         settings = {"env": {"EDITOR": "vim"}}
         p = tmp_path / "settings.json"
         p.write_text(json.dumps(settings))
-        env_path = tmp_path / "placeholders.env"
+        env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
         with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
-             patch("mitmproxy_addon.PLACEHOLDERS_ENV_PATH", str(env_path)):
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
         assert 'export EDITOR="vim"' in content
@@ -332,10 +332,10 @@ class TestConfigLoading:
         settings = {"secrets": {"K": {"value": "v", "hosts": []}}}
         p = tmp_path / "settings.json"
         p.write_text(json.dumps(settings))
-        env_path = tmp_path / "placeholders.env"
+        env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
         with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
-             patch("mitmproxy_addon.PLACEHOLDERS_ENV_PATH", str(env_path)):
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
         assert content.startswith('export K=')

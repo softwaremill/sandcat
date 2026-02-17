@@ -16,7 +16,7 @@ from fnmatch import fnmatch
 from mitmproxy import ctx, http
 
 SETTINGS_PATH = "/config/settings.json"
-PLACEHOLDERS_ENV_PATH = "/home/mitmproxy/.mitmproxy/placeholders.env"
+SANDCAT_ENV_PATH = "/home/mitmproxy/.mitmproxy/sandcat.env"
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class SandcatAddon:
         self._write_placeholders_env()
 
         ctx.log.info(
-            f"Loaded {len(self.secrets)} secret(s), wrote {PLACEHOLDERS_ENV_PATH}"
+            f"Loaded {len(self.env)} env var(s) and {len(self.secrets)} secret(s), wrote {SANDCAT_ENV_PATH}"
         )
 
     def _load_network_rules(self, raw_rules: list):
@@ -64,7 +64,7 @@ class SandcatAddon:
             lines.append(f'export {name}="{value}"')
         for name, entry in self.secrets.items():
             lines.append(f'export {name}="{entry["placeholder"]}"')
-        with open(PLACEHOLDERS_ENV_PATH, "w") as f:
+        with open(SANDCAT_ENV_PATH, "w") as f:
             f.write("\n".join(lines) + "\n")
 
     def _is_request_allowed(self, method: str, host: str) -> bool:
