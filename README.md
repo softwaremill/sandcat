@@ -547,6 +547,20 @@ their own CA handling:
   ```
 - **Python** uses the system CA store — works out of the box.
 
+## Development
+
+Start the container from the command line:
+
+```sh
+docker compose -f .devcontainer/compose.yml run --rm --build app bash
+```
+
+Tear down all containers and volumes (resets persisted home directory):
+
+```sh
+docker compose -f .devcontainer/compose.yml down -v
+```
+
 ## Commercial Support
 
 We offer commercial services around AI-assisted software development.

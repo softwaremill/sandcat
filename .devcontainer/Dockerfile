@@ -1,13 +1,10 @@
-FROM debian:trixie-slim
+FROM mcr.microsoft.com/devcontainers/base:debian
 
-#   ca-certificates - system CA store, needed for update-ca-certificates
-#   gosu            - used by the entrypoint to drop privileges
+# gosu is used by the entrypoint to drop privileges.
+# ca-certificates, curl, git are already in the devcontainers base image.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl gh git gosu jq vim \
+    && apt-get install -y --no-install-recommends gh gosu jq vim \
     && rm -rf /var/lib/apt/lists/*
-
-# Devcontainer base images include a vscode user; plain images do not.
-RUN useradd -m -s /bin/bash vscode
 
 COPY --chmod=755 scripts/app-init.sh /usr/local/bin/app-init.sh
 COPY --chmod=755 scripts/app-user-init.sh /usr/local/bin/app-user-init.sh
