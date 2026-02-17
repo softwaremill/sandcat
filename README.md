@@ -53,145 +53,86 @@ gh auth status
 
 See [Testing the proxy](#testing-the-proxy) for more verification steps.
 
-## Quick start: add to your project
+## Add to your project
 
-Add sandcat as a git submodule inside `.devcontainer/`:
+Sandcat can be installed using one of three methods — a Claude Code prompt, an install script, or a git submodule.
+All three methods produce the same target directory layout:
+
+```
+.devcontainer/
+├── sandcat/                # shared infrastructure (do not edit)
+│   ├── compose-proxy.yml
+│   ├── Dockerfile.wg-client
+│   ├── scripts/
+│   │   ├── app-init.sh
+│   │   ├── app-post-start.sh
+│   │   ├── app-user-init.sh
+│   │   ├── mitmproxy_addon.py
+│   │   └── wg-client-init.sh
+│   └── settings.example.json
+├── compose-all.yml         # project-specific (customize)
+├── Dockerfile.app          # project-specific (customize)
+└── devcontainer.json       # project-specific (customize)
+```
+
+### Option 1: Claude Code prompt
+
+Copy the prompt below into Claude Code (or any LLM-based coding agent). It will
+read the sandcat repository and this project's codebase, then generate tailored
+dev container files:
+
+````text
+Set up a Sandcat dev container for this project. Read the instructions and
+template files at https://github.com/softwaremill/sandcat — download shared
+infrastructure files into .devcontainer/sandcat/ and generate compose-all.yml,
+Dockerfile.app, and devcontainer.json in .devcontainer/, adjusting paths and the
+project name. Inspect the project's codebase to determine which language
+toolchains and runtimes to install via mise in Dockerfile.app, and add any
+runtime-specific CA trust configuration needed for mitmproxy TLS interception
+(see the TLS section in the sandcat README).
+````
+
+### Option 2: Install script
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/softwaremill/sandcat/master/install.sh | bash
+```
+
+By default the project name is taken from the current directory. To override:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/softwaremill/sandcat/master/install.sh | bash -s -- --name my-project
+```
+
+### Option 3: Git submodule
 
 ```sh
 git submodule add https://github.com/softwaremill/sandcat.git .devcontainer/sandcat
 ```
 
-Your `.devcontainer/` directory should end up looking like this:
+Then create the three project-specific files in `.devcontainer/`. You can use
+the repo's own files as templates — copy `compose-all.yml`, `Dockerfile.app`,
+and `devcontainer.json` from the submodule and make these adjustments:
 
-```
-.devcontainer/
-├── sandcat/                # the submodule
-│   ├── compose-proxy.yml   # mitmproxy + wg-client services
-│   ├── Dockerfile.wg-client
-│   ├── scripts/
-│   │   ├── app-init.sh            # entrypoint for app containers (root)
-│   │   ├── app-post-start.sh     # VS Code post-start hook (credential socket cleanup)
-│   │   ├── app-user-init.sh      # vscode-user tasks (git identity, CLI update)
-│   │   ├── mitmproxy_addon.py    # mitmproxy addon (network rules + secret substitution)
-│   │   └── wg-client-init.sh     # wg-client entrypoint
-│   └── settings.example.json
-├── compose-all.yml         # your project's compose file (includes sandcat)
-├── Dockerfile.app          # your app container image
-└── devcontainer.json       # dev container configuration
-```
+- **`compose-all.yml`**: change the include path to `sandcat/compose-proxy.yml`
+  and the project volume to `..:/workspaces/<your-project>:cached`.
+- **`Dockerfile.app`**: change COPY paths to `sandcat/scripts/app-init.sh` and
+  `sandcat/scripts/app-user-init.sh`.
+- **`devcontainer.json`**: change `dockerComposeFile` to `compose-all.yml`
+  (not `../compose-all.yml`), and update `name`, `workspaceFolder`, and
+  `postStartCommand` to use your project name.
 
-The submodule also contains `Dockerfile.app` and `compose-all.yml` — these are
-templates. Copy them into your `.devcontainer/` and customize as needed. Your
-`compose-all.yml` includes sandcat's proxy services and defines your app:
+### Customizing the generated files
 
-```yaml
-include:
-  - path: sandcat/compose-proxy.yml
+**`compose-all.yml`** — `network_mode: "service:wg-client"` routes all traffic
+through the WireGuard tunnel. The `mitmproxy-config` volume gives your container
+access to the CA cert, env vars, and secret placeholders. The `~/.claude/*`
+bind-mounts forward host Claude Code customizations — remove any mount whose
+source does not exist on your host.
 
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.app
-    network_mode: "service:wg-client"
-    volumes:
-      - ..:/workspaces/project:cached
-      # Named volume so user-level config persists across rebuilds.
-      - app-home:/home/vscode
-      # CA cert, env vars, and secret placeholders.
-      - mitmproxy-config:/mitmproxy-config:ro
-      # Optional: forward host Claude Code customizations into the container.
-      # Remove these if you don't use Claude Code or the files don't exist.
-      - ~/.claude/CLAUDE.md:/home/vscode/.claude/CLAUDE.md:ro
-      - ~/.claude/agents:/home/vscode/.claude/agents:ro
-      - ~/.claude/commands:/home/vscode/.claude/commands:ro
-    command: sleep infinity
-    depends_on:
-      wg-client:
-        condition: service_healthy
-
-volumes:
-  app-home:
-```
-
-The key parts: `network_mode: "service:wg-client"` routes all traffic through
-the WireGuard tunnel, and the `mitmproxy-config` volume gives your container
-access to the CA cert, env vars, and secret placeholders.
-
-In your `.devcontainer/Dockerfile.app`, install whatever dev tooling your
-project needs and use `app-init.sh` as the entrypoint. The template uses
-[mise](https://github.com/jdx/mise) to manage language toolchains:
-
-```dockerfile
-FROM mcr.microsoft.com/devcontainers/base:debian
-
-# gosu is used by the entrypoint to drop privileges.
-# ca-certificates, curl, git are already in the devcontainers base image.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --chmod=755 sandcat/scripts/app-init.sh /usr/local/bin/app-init.sh
-COPY --chmod=755 sandcat/scripts/app-user-init.sh /usr/local/bin/app-user-init.sh
-
-USER vscode
-
-# Install mise (SDK manager), then use it to install Node.js and Claude Code.
-RUN curl https://mise.run | sh
-RUN echo 'export PATH="/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:$PATH"' >> /home/vscode/.profile
-ENV PATH="/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:$PATH"
-RUN mise use -g node@lts \
-    && npm install -g @anthropic-ai/claude-code
-
-# Add your language toolchain here, e.g.:
-#   RUN mise use -g python@3.13
-
-# Seed onboarding so Claude Code uses the API key from secret
-# substitution without interactive setup.
-RUN mkdir -p /home/vscode/.claude \
-    && echo '{"hasCompletedOnboarding":true}' > /home/vscode/.claude.json
-
-USER root
-ENTRYPOINT ["/usr/local/bin/app-init.sh"]
-```
-
-The entrypoint installs the mitmproxy CA certificate into the system trust
-store, loads environment variables and secret placeholders from `sandcat.env`,
-and drops to the `vscode` user before running the container's main command.
-
-See [`Dockerfile.app`](Dockerfile.app) in this repo for a working example.
-
-Finally, copy `devcontainer.json` from the sandcat submodule into your
-`.devcontainer/` directory. This tells VS Code which compose file and service to
-use:
-
-```jsonc
-{
-    "name": "My Project",
-    "dockerComposeFile": "compose-all.yml",
-    "service": "app",
-    "workspaceFolder": "/workspaces/project",
-    // Remove credential sockets that VS Code forwards into the container.
-    "postStartCommand": "bash /workspaces/project/.devcontainer/sandcat/scripts/app-post-start.sh",
-    // Clear forwarded credential sockets for isolation.
-    "remoteEnv": {
-        "SSH_AUTH_SOCK": "",
-        "GPG_AGENT_INFO": "",
-        "GIT_ASKPASS": ""
-    }
-}
-```
-
-Adjust `workspaceFolder` and the `postStartCommand` path to match your project
-layout. See the bundled [`devcontainer.json`](.devcontainer/devcontainer.json)
-for the full set of recommended VS Code settings (workspace trust, Claude Code
-permissions, etc.).
-
-### Adapting the Dockerfile for your stack
-
-The bundled Dockerfile uses [mise](https://mise.jdx.dev/) to manage language
-toolchains. Add `mise use -g` lines to the marked placeholder in the Dockerfile
-to install what you need:
+**`Dockerfile.app`** — uses [mise](https://mise.jdx.dev/) to manage language
+toolchains. Look for the `CUSTOMIZE` marker and add `mise use -g` lines for
+your stack:
 
 | Stack | mise command |
 |-------|-------------|
@@ -202,6 +143,10 @@ to install what you need:
 
 Some runtimes need extra configuration to trust the mitmproxy CA — see [TLS and
 CA certificates](#tls-and-ca-certificates).
+
+**`devcontainer.json`** — includes VS Code hardening settings (credential
+socket cleanup, workspace trust, disabled local terminal). See
+[Hardening the VS Code setup](#hardening-the-vs-code-setup) for details.
 
 ## Settings format
 
