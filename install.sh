@@ -88,7 +88,8 @@ echo "Generating project files in .devcontainer/ ..."
 # compose-all.yml: adjust include path, volume mount context, project name
 curl -fsSL "$REPO_URL/compose-all.yml" \
   | sed \
-    -e "s|path: compose-proxy.yml|path: sandcat/compose-proxy.yml|" \
+    -e "s|^name: sandcat|name: $PROJECT_NAME|" \
+    -e "s|^  - path: compose-proxy.yml|  - path: sandcat/compose-proxy.yml|" \
     -e "s|\.:/workspaces/sandcat:cached|..:/workspaces/$PROJECT_NAME:cached|" \
   > .devcontainer/compose-all.yml
 
@@ -107,6 +108,30 @@ curl -fsSL "$REPO_URL/.devcontainer/devcontainer.json" \
     -e "s|/workspaces/sandcat|/workspaces/$PROJECT_NAME|" \
     -e "s|\"name\": \"Sandcat\"|\"name\": \"$PROJECT_NAME\"|" \
   > .devcontainer/devcontainer.json
+
+# ---------------------------------------------------------------------------
+# Verify transformations
+# ---------------------------------------------------------------------------
+ERRORS=0
+verify() {
+  if ! grep -q "$1" "$2"; then
+    echo "Warning: expected pattern not found in $2: $1" >&2
+    ERRORS=$((ERRORS + 1))
+  fi
+}
+verify "^name: $PROJECT_NAME" .devcontainer/compose-all.yml
+verify "path: sandcat/compose-proxy.yml" .devcontainer/compose-all.yml
+verify "/workspaces/$PROJECT_NAME:cached" .devcontainer/compose-all.yml
+verify "sandcat/scripts/app-init.sh" .devcontainer/Dockerfile.app
+verify "\"compose-all.yml\"" .devcontainer/devcontainer.json
+verify "/workspaces/$PROJECT_NAME\"" .devcontainer/devcontainer.json
+verify "\"name\": \"$PROJECT_NAME\"" .devcontainer/devcontainer.json
+if [[ $ERRORS -gt 0 ]]; then
+  echo "Error: $ERRORS transformation(s) failed. The upstream template files" >&2
+  echo "may have changed. Please check the generated files or file an issue" >&2
+  echo "at https://github.com/softwaremill/sandcat/issues" >&2
+  exit 1
+fi
 
 echo ""
 echo "Done! Created .devcontainer/ layout for '$PROJECT_NAME':"
