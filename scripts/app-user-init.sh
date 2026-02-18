@@ -13,6 +13,10 @@ if [ -n "${GIT_USER_EMAIL:-}" ]; then
     git config --global user.email "$GIT_USER_EMAIL"
 fi
 
+# GPG keys are not forwarded into the container (credential isolation),
+# so commit signing would always fail. Disable it.
+git config --global commit.gpgsign false
+
 # If Java is installed (via mise), import the mitmproxy CA into Java's trust
 # store. Java uses its own cacerts and ignores the system CA store.
 CA_CERT="/mitmproxy-config/mitmproxy-ca-cert.pem"
