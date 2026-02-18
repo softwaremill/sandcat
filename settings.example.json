@@ -27,8 +27,11 @@
     },
     {
       "action": "allow",
-      "host": "*.github.com",
-      "method": "POST"
+      "host": "*.github.com"
+    },
+    {
+      "action": "allow",
+      "host": "github.com"
     },
     {
       "action": "allow",
