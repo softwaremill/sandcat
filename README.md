@@ -538,16 +538,14 @@ enough for most tools — but some runtimes bring their own CA handling:
   `rustls-tls-native-roots` in reqwest so it reads the system CA store at
   runtime instead.
 - **Java** uses its own trust store (`cacerts`) and ignores the system CA.
-  `app-user-init.sh` detects a mise-installed Java and automatically imports
-  the mitmproxy CA into Java's trust store at container startup. It also
-  creates a standalone copy of the modified trust store at a fixed path
-  (`~/.local/share/sandcat/cacerts`), sets `JAVA_HOME` to a symlink
-  pointing at the real JVM (so tools find it instead of the mise shim), and
-  sets `JAVA_TOOL_OPTIONS` with `-Djavax.net.ssl.trustStore`. Both are
-  exported via `/etc/profile.d/` (for shells) and `~/.bashrc` (for VS Code
-  extension processes via `userEnvProbe`). **GraalVM native binaries**
-  (e.g. `scala-cli`) ignore
-  `JAVA_TOOL_OPTIONS` and `JAVA_HOME` for trust store resolution.
+  The `Dockerfile.app` build step creates a version-independent `JAVA_HOME`
+  symlink, copies the default `cacerts`, and writes `JAVA_HOME` and
+  `JAVA_TOOL_OPTIONS` (with `-Djavax.net.ssl.trustStore`) to `.bashrc` so
+  VS Code's `userEnvProbe` picks them up immediately. At container startup,
+  `app-user-init.sh` imports the mitmproxy CA into the `cacerts` copy at
+  `~/.local/share/sandcat/cacerts` and updates the symlink target if the
+  Java version changed. **GraalVM native binaries** (e.g. `scala-cli`)
+  ignore `JAVA_TOOL_OPTIONS` and `JAVA_HOME` for trust store resolution.
   `app-user-init.sh` pre-creates the `scala-cli` config file with the trust
   store path so it works even before scala-cli is installed. Other native
   tools may need similar tool-specific configuration.
