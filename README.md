@@ -256,11 +256,15 @@ written.
 
 ### Claude Code
 
-Claude Code ignores `ANTHROPIC_API_KEY` until onboarding is complete. Without
-`{"hasCompletedOnboarding": true}` in `~/.claude.json`, it prompts for
-browser-based login instead of using the key. The dev container Dockerfile sets
-this during the build, so Claude Code picks up the API key from secret
-substitution without manual setup.
+Claude Code supports two authentication methods inside the container:
+
+- **API key** — add an `ANTHROPIC_API_KEY` secret to `settings.json`. The
+  entrypoint detects the key and seeds `~/.claude.json` with
+  `{"hasCompletedOnboarding": true}` so Claude Code uses it without
+  interactive setup.
+- **Subscription (browser login)** — omit `ANTHROPIC_API_KEY` from
+  `settings.json`. Claude Code will prompt for browser-based login on first
+  run.
 
 **Autonomous mode.** The bundled `devcontainer.json` enables
 `claudeCode.allowDangerouslySkipPermissions` and sets
