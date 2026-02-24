@@ -64,7 +64,6 @@ echo "Downloading Sandcat files into $SANDCAT_DIR/ ..."
 mkdir -p "$SANDCAT_DIR/scripts"
 
 SHARED_FILES=(
-  "compose-proxy.yml"
   "Dockerfile.wg-client"
   "settings.example.json"
   "scripts/app-init.sh"
@@ -77,6 +76,12 @@ SHARED_FILES=(
 for file in "${SHARED_FILES[@]}"; do
   curl -fsSL "$REPO_URL/$file" -o "$SANDCAT_DIR/$file"
 done
+
+# compose-proxy.yml: adjust .sandcat/ mount path for .devcontainer/sandcat/ layout
+curl -fsSL "$REPO_URL/compose-proxy.yml" \
+  | sed \
+    -e "s|\./\.sandcat:/config/project:ro|../../.sandcat:/config/project:ro|" \
+  > "$SANDCAT_DIR/compose-proxy.yml"
 
 echo "Downloaded shared files."
 
@@ -92,7 +97,6 @@ curl -fsSL "$REPO_URL/compose-all.yml" \
     -e "s|^  - path: compose-proxy.yml|  - path: sandcat/compose-proxy.yml|" \
     -e "s|\.:/workspaces/sandcat:cached|..:/workspaces/$PROJECT_NAME:cached|" \
     -e "s|\./.devcontainer:/workspaces/sandcat/.devcontainer:ro|../.devcontainer:/workspaces/$PROJECT_NAME/.devcontainer:ro|" \
-    -e "s|\./\.sandcat:/config/project:ro|../.sandcat:/config/project:ro|" \
   > .devcontainer/compose-all.yml
 
 # Dockerfile.app: adjust COPY paths, add CUSTOMIZE marker
@@ -125,7 +129,7 @@ verify "^name: $PROJECT_NAME" .devcontainer/compose-all.yml
 verify "path: sandcat/compose-proxy.yml" .devcontainer/compose-all.yml
 verify "/workspaces/$PROJECT_NAME:cached" .devcontainer/compose-all.yml
 verify "/workspaces/$PROJECT_NAME/.devcontainer:ro" .devcontainer/compose-all.yml
-verify "../.sandcat:/config/project:ro" .devcontainer/compose-all.yml
+verify "../../.sandcat:/config/project:ro" .devcontainer/sandcat/compose-proxy.yml
 verify "sandcat/scripts/app-init.sh" .devcontainer/Dockerfile.app
 verify "\"compose-all.yml\"" .devcontainer/devcontainer.json
 verify "/workspaces/$PROJECT_NAME\"" .devcontainer/devcontainer.json
