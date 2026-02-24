@@ -19,11 +19,18 @@ fi
 # repo-level config.
 git config --global commit.gpgsign false
 
-# SSH is blocked (port 22 doesn't go through the HTTP proxy), so rewrite
-# git SSH URLs to HTTPS. Sandcat's secret substitution handles GitHub
-# token authentication over HTTPS transparently.
+# SSH keys are not available in the container (SSH_AUTH_SOCK is cleared
+# and credential sockets are removed), so rewrite git SSH URLs to HTTPS.
 git config --global url."https://github.com/".insteadOf "git@github.com:"
 git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+
+# When GITHUB_TOKEN is available (as a placeholder), configure gh as the
+# git credential helper so HTTPS git operations (push, private repos)
+# authenticate automatically. The placeholder token flows through
+# mitmproxy's secret substitution, which replaces it with the real value.
+if command -v gh >/dev/null 2>&1 && [ -n "${GITHUB_TOKEN:-}" ]; then
+    git config --global credential."https://github.com".helper "!gh auth git-credential"
+fi
 
 # If Java is installed (via mise), import the mitmproxy CA into Java's trust
 # store. Java uses its own cacerts and ignores the system CA store.

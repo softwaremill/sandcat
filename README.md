@@ -510,11 +510,12 @@ secret placeholders), and `app-user-init.sh` applies
 `GIT_USER_NAME`/`GIT_USER_EMAIL` via `git config --global` at container startup.
 
 **HTTPS remotes only.** SSH-based git operations won't work — `SSH_AUTH_SOCK` is
-cleared and port 22 doesn't go through the HTTP proxy. The entrypoint
-automatically rewrites GitHub SSH URLs to HTTPS via `git config
+cleared and credential sockets are removed, so no SSH keys are available. The
+entrypoint automatically rewrites GitHub SSH URLs to HTTPS via `git config
 url.*.insteadOf`, so existing `git@github.com:` remotes work without manual
-changes. Sandcat's secret substitution handles GitHub token authentication over
-HTTPS transparently.
+changes. When `GITHUB_TOKEN` is configured, `gh` is set up as the git credential
+helper so that push and private-repo access work over HTTPS — the placeholder
+token flows through mitmproxy's secret substitution transparently.
 
 ## Testing the proxy
 
