@@ -44,7 +44,8 @@ sys.modules["mitmproxy.http"] = _http
 sys.modules["mitmproxy"].ctx = _ctx
 sys.modules["mitmproxy"].http = _http
 
-from mitmproxy_addon import SandcatAddon  # noqa: E402
+# Import after mitmproxy stubs are installed in sys.modules above.
+from mitmproxy_addon import SandcatAddon, SETTINGS_PATHS  # noqa: E402
 
 
 def _make_flow(method="GET", host="example.com", url=None, headers=None, content=None):
@@ -256,6 +257,7 @@ class TestConfigLoading:
         addon = SandcatAddon()
         with patch("mitmproxy_addon.os.path.isfile", return_value=False):
             addon.load(MagicMock())
+        assert addon.env == {}
         assert addon.secrets == {}
         assert addon.network_rules == []
 
@@ -264,7 +266,7 @@ class TestConfigLoading:
         p = tmp_path / "settings.json"
         p.write_text(json.dumps(settings))
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(tmp_path / "sandcat.env")):
             addon.load(MagicMock())
         assert addon.secrets == {}
@@ -277,7 +279,7 @@ class TestConfigLoading:
         p = tmp_path / "settings.json"
         p.write_text(json.dumps(settings))
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(tmp_path / "sandcat.env")):
             addon.load(MagicMock())
         assert len(addon.secrets) == 1
@@ -292,7 +294,7 @@ class TestConfigLoading:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -308,7 +310,7 @@ class TestConfigLoading:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -322,7 +324,7 @@ class TestConfigLoading:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -334,7 +336,7 @@ class TestConfigLoading:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -352,7 +354,7 @@ class TestShellEscaping:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -364,7 +366,7 @@ class TestShellEscaping:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -376,7 +378,7 @@ class TestShellEscaping:
         p.write_text(json.dumps(settings))
         env_path = tmp_path / "sandcat.env"
         addon = SandcatAddon()
-        with patch("mitmproxy_addon.SETTINGS_PATH", str(p)), \
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(p)]), \
              patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
             addon.load(MagicMock())
         content = env_path.read_text()
@@ -385,3 +387,89 @@ class TestShellEscaping:
     def test_plain_values_unchanged(self):
         assert SandcatAddon._shell_escape("hello world") == "hello world"
         assert SandcatAddon._shell_escape("sk-ant-abc123") == "sk-ant-abc123"
+
+
+# ---------------------------------------------------------------------------
+# Settings merging
+# ---------------------------------------------------------------------------
+
+class TestSettingsMerging:
+    def test_env_higher_precedence_wins(self):
+        layers = [
+            {"env": {"A": "user", "B": "user"}},
+            {"env": {"B": "project"}},
+        ]
+        merged = SandcatAddon._merge_settings(layers)
+        assert merged["env"] == {"A": "user", "B": "project"}
+
+    def test_secrets_higher_precedence_wins(self):
+        layers = [
+            {"secrets": {
+                "KEY1": {"value": "v1-user", "hosts": ["a.com"]},
+                "KEY2": {"value": "v2-user", "hosts": ["b.com"]},
+            }},
+            {"secrets": {
+                "KEY2": {"value": "v2-project", "hosts": ["c.com"]},
+            }},
+        ]
+        merged = SandcatAddon._merge_settings(layers)
+        assert merged["secrets"]["KEY1"]["value"] == "v1-user"
+        assert merged["secrets"]["KEY2"]["value"] == "v2-project"
+        assert merged["secrets"]["KEY2"]["hosts"] == ["c.com"]
+
+    def test_network_rules_highest_precedence_first(self):
+        layers = [
+            {"network": [{"action": "allow", "host": "user.com"}]},
+            {"network": [{"action": "allow", "host": "project.com"}]},
+            {"network": [{"action": "deny", "host": "local.com"}]},
+        ]
+        merged = SandcatAddon._merge_settings(layers)
+        assert merged["network"] == [
+            {"action": "deny", "host": "local.com"},
+            {"action": "allow", "host": "project.com"},
+            {"action": "allow", "host": "user.com"},
+        ]
+
+    def test_missing_sections_treated_as_empty(self):
+        layers = [
+            {"env": {"A": "1"}},
+            {"network": [{"action": "allow", "host": "*"}]},
+        ]
+        merged = SandcatAddon._merge_settings(layers)
+        assert merged["env"] == {"A": "1"}
+        assert merged["secrets"] == {}
+        assert merged["network"] == [{"action": "allow", "host": "*"}]
+
+    def test_empty_layers_list(self):
+        merged = SandcatAddon._merge_settings([])
+        assert merged == {"env": {}, "secrets": {}, "network": []}
+
+
+
+class TestMultiFileLoading:
+    def test_loads_multiple_settings_files(self, tmp_path):
+        user_settings = {"env": {"A": "user"}, "network": [{"action": "allow", "host": "user.com"}]}
+        project_settings = {"env": {"A": "project", "B": "project"}}
+        (tmp_path / "user.json").write_text(json.dumps(user_settings))
+        (tmp_path / "project.json").write_text(json.dumps(project_settings))
+        env_path = tmp_path / "sandcat.env"
+        addon = SandcatAddon()
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [str(tmp_path / "user.json"), str(tmp_path / "project.json")]), \
+             patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
+            addon.load(MagicMock())
+        assert addon.env == {"A": "project", "B": "project"}
+        assert addon.network_rules == [{"action": "allow", "host": "user.com"}]
+
+    def test_skips_missing_files(self, tmp_path):
+        user_settings = {"env": {"A": "user"}}
+        (tmp_path / "user.json").write_text(json.dumps(user_settings))
+        env_path = tmp_path / "sandcat.env"
+        addon = SandcatAddon()
+        with patch("mitmproxy_addon.SETTINGS_PATHS", [
+            str(tmp_path / "user.json"),
+            str(tmp_path / "missing.json"),
+            str(tmp_path / "also-missing.json"),
+        ]), patch("mitmproxy_addon.SANDCAT_ENV_PATH", str(env_path)):
+            addon.load(MagicMock())
+        assert addon.env == {"A": "user"}
+

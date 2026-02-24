@@ -27,7 +27,7 @@ devcontainer setup, so you can clone and explore how things work right away.
 
 ## Quick start: try it out
 
-Create a settings file with your secrets and network rules:
+Create a user settings file with your secrets:
 
 ```sh
 mkdir -p ~/.config/sandcat
@@ -153,7 +153,29 @@ socket cleanup, workspace trust, disabled local terminal). See
 
 ## Settings format
 
-`~/.config/sandcat/settings.json`:
+Settings are loaded from up to three files (highest to lowest precedence):
+
+| File | Scope | Git |
+|------|-------|-----|
+| `.sandcat/settings.local.json` | Per-project overrides | **Ignored** (add to `.gitignore`) |
+| `.sandcat/settings.json` | Per-project defaults | Committed |
+| `~/.config/sandcat/settings.json` | User-wide defaults | N/A |
+
+All three files use the same JSON format. Missing files are silently skipped.
+If no files exist, the addon disables itself.
+
+**Merge rules:**
+- `env` — merged; higher-precedence values overwrite lower ones.
+- `secrets` — merged; higher-precedence entries overwrite lower ones.
+- `network` — concatenated; highest-precedence rules come first. Since rules
+  are evaluated top-to-bottom with first-match-wins, this means local rules
+  take priority over project rules, which take priority over user rules.
+
+A typical setup keeps user-specific settings (git identity, API keys) in the
+user file, project-wide network rules in the project file, and developer
+overrides in the local file:
+
+`~/.config/sandcat/settings.json` (user):
 
 ```json
 {
@@ -166,15 +188,36 @@ socket cleanup, workspace trust, disabled local terminal). See
       "value": "sk-ant-real-key-here",
       "hosts": ["api.anthropic.com"]
     }
-  },
+  }
+}
+```
+
+`.sandcat/settings.json` (project, committed):
+
+```json
+{
   "network": [
     {"action": "allow", "host": "*", "method": "GET"},
-    {"action": "allow", "host": "*.github.com", "method": "POST"},
+    {"action": "allow", "host": "*.github.com"},
     {"action": "allow", "host": "*.anthropic.com"},
     {"action": "allow", "host": "*.claude.com"}
   ]
 }
 ```
+
+`.sandcat/settings.local.json` (project, git-ignored):
+
+```json
+{
+  "network": [
+    {"action": "allow", "host": "internal.corp.dev"}
+  ]
+}
+```
+
+With these files, the merged network rules are (local first, then project, then
+user): allow `internal.corp.dev`, then the project rules. Env and secrets come
+from the user file since neither project file defines them.
 
 Warning: allowing all GET-traffic, all traffic from GitHub or in fact any
 not-fully-trusted/controlled site, leaves the possibility of a prompt injection
@@ -231,12 +274,14 @@ accidental secret leakage to unintended services.
 ### How it works internally
 
 1. The mitmproxy container mounts `~/.config/sandcat/settings.json` (read-only)
-   and the `mitmproxy_addon.py` addon script.
-2. On startup, the addon reads `settings.json` and writes `sandcat.env` to the
-   `mitmproxy-config` shared volume (`/home/mitmproxy/.mitmproxy/sandcat.env`).
-   This file contains plain env vars (e.g. `export GIT_USER_NAME="Your Name"`)
-   and secret placeholders (e.g. `export
-   ANTHROPIC_API_KEY="SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY"`).
+   and the project's `.sandcat/` directory (read-only) alongside the
+   `mitmproxy_addon.py` addon script.
+2. On startup, the addon reads all available settings files (user, project,
+   local), merges them according to the precedence rules above, and writes
+   `sandcat.env` to the `mitmproxy-config` shared volume
+   (`/home/mitmproxy/.mitmproxy/sandcat.env`). This file contains plain env
+   vars (e.g. `export GIT_USER_NAME="Your Name"`) and secret placeholders
+   (e.g. `export ANTHROPIC_API_KEY="SANDCAT_PLACEHOLDER_ANTHROPIC_API_KEY"`).
 3. App containers mount `mitmproxy-config` read-only at `/mitmproxy-config/`.
    The shared entrypoint (`app-init.sh`) sources `sandcat.env` after installing
    the CA cert, so every process gets the env vars and placeholder values.
@@ -250,8 +295,8 @@ Real secrets never leave the mitmproxy container.
 
 ### Disabling
 
-Delete or rename `~/.config/sandcat/settings.json`. If the file is absent, the
-addon disables itself — no network rules are enforced and `sandcat.env` is not
+Remove all settings files. If no settings file exists at any layer, the addon
+disables itself — no network rules are enforced and `sandcat.env` is not
 written.
 
 ### Claude Code
@@ -332,6 +377,7 @@ flowchart TB
 
     subgraph host["Host bind-mounts (read-only)"]
         settings["~/.config/sandcat/<br/>settings.json"]
+        projsettings[".sandcat/<br/>settings.json,<br/>settings.local.json"]
         claude["~/.claude/<br/>CLAUDE.md, agents/, commands/"]
     end
 
@@ -340,11 +386,13 @@ flowchart TB
     app["app"] -- "read-only" --> mc
     app -- "read-write" --> ah
     settings -. "bind-mount" .-> mitm
+    projsettings -. "bind-mount" .-> mitm
     claude -. "bind-mount" .-> app
 
     style mc fill:#f0e8fd,stroke:#904ad9
     style ah fill:#f0e8fd,stroke:#904ad9
     style settings fill:#fde8e8,stroke:#d94a4a
+    style projsettings fill:#fde8e8,stroke:#d94a4a
     style claude fill:#fde8e8,stroke:#d94a4a
 ```
 
@@ -353,8 +401,10 @@ flowchart TB
   placeholders); all other containers mount it read-only.
 - **`app-home`** persists the vscode user's home directory across container
   rebuilds (Claude Code auth, shell history, git config).
-- **`settings.json`** is bind-mounted from the host into mitmproxy only — app
-  containers never see real secrets.
+- **Settings files** are bind-mounted from the host into mitmproxy only — app
+  containers never see real secrets. The user settings file
+  (`~/.config/sandcat/settings.json`) and the project settings directory
+  (`.sandcat/`) are both mounted read-only.
 - **Claude Code customizations** (`CLAUDE.md`, `agents/`, `commands/`) are
   bind-mounted from the host into the app container read-only.
 
@@ -372,7 +422,7 @@ sequenceDiagram
     Note over M: starts first (no dependencies)
     M->>M: Start WireGuard server
     M->>M: Generate wireguard.conf (key pairs)
-    M->>M: Read settings.json
+    M->>M: Read + merge settings (user, project, local)
     M->>M: Write sandcat.env (env vars + secret placeholders)
     M->>M: Write mitmproxy-ca-cert.pem
     Note over M: healthcheck passes<br/>(wireguard.conf exists)
