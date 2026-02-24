@@ -92,6 +92,11 @@ ip -6 rule add table main suppress_prefixlength 0
 docker_network=$(ip -4 route show dev eth0 proto kernel | awk '{print $1}')
 docker_gateway=$(ip -4 route show default dev eth0 | awk '{print $3}')
 
+if [ -z "$docker_network" ] || [ -z "$docker_gateway" ]; then
+    echo "Failed to determine Docker IPv4 network/gateway for eth0; refusing to configure iptables." >&2
+    exit 1
+fi
+
 iptables -I OUTPUT -o wg0 -j ACCEPT
 iptables -I OUTPUT -o lo -j ACCEPT
 iptables -I OUTPUT -d "$mitmproxy_ip" -p udp --dport 51820 -m mark --mark 51820 -j ACCEPT
