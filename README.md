@@ -513,9 +513,8 @@ secret placeholders), and `app-user-init.sh` applies
 cleared and credential sockets are removed, so no SSH keys are available. The
 entrypoint automatically rewrites GitHub SSH URLs to HTTPS via `git config
 url.*.insteadOf`, so existing `git@github.com:` remotes work without manual
-changes. When `GITHUB_TOKEN` is configured, `gh` is set up as the git credential
-helper so that push and private-repo access work over HTTPS — the placeholder
-token flows through mitmproxy's secret substitution transparently.
+changes. Sandcat's secret substitution handles GitHub token authentication over
+HTTPS transparently.
 
 ## Testing the proxy
 
