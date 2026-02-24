@@ -223,9 +223,10 @@ from the user file since neither project file defines them.
 
 Warning: the liberal template allows all GET traffic, which means the agent can
 read arbitrary web content — a vector for prompt injection. The strict template
-mitigates this by allowing only known service domains. Blocking `POST` traffic
-might prevent code from being exfiltrated, but malicious code might still be
-generated as part of the project.
+narrows this to known service domains, but both templates allow full access to
+GitHub, which can be used to read untrusted content (prompt injection) or push
+data out (exfiltration). Malicious code might also be generated as part of the
+project itself.
 
 ## Network access rules
 
@@ -244,33 +245,39 @@ Sandcat ships two example configurations. Copy one to get started and adjust to
 your needs:
 
 **`settings.liberal.example.json`** — allows all HTTP GET requests to any host,
-plus full access to GitHub and Anthropic/Claude. This is convenient for
-development but means the agent can read arbitrary web content, which leaves
-the possibility of prompt injection:
+plus full access (all methods) to GitHub and Anthropic/Claude. Convenient for
+development but means the agent can read arbitrary web content, which is a
+prompt injection vector:
 
 ```sh
 cp settings.liberal.example.json ~/.config/sandcat/settings.json
 ```
 
-**`settings.strict.example.json`** — allows only explicitly listed service
-domains. No wildcard GET. This is more secure but may require adding domains
-for your specific stack (package registries, internal services, etc.):
+**`settings.strict.example.json`** — allows only listed service domains. Full
+access (all methods) is limited to GitHub and Anthropic/Claude, which need POST
+for pushing code and API calls. All other domains are GET-only (downloads,
+package installs). You may need to add domains for your specific stack:
 
 ```sh
 cp settings.strict.example.json ~/.config/sandcat/settings.json
 ```
 
+The strict template narrows the attack surface compared to the liberal one, but
+does not eliminate it: the agent can still read arbitrary content from GitHub
+(issues, PRs, repository files) and write to it (commits, comments), which
+remains a prompt injection and data exfiltration vector.
+
 The strict template includes:
 
-| Service | Domains |
-|---------|---------|
-| GitHub | `github.com`, `*.github.com`, `*.githubusercontent.com` |
-| Claude / Anthropic | `*.anthropic.com`, `*.claude.ai`, `*.claude.com` |
-| VS Code | `update.code.visualstudio.com`, `marketplace.visualstudio.com`, `*.vsassets.io`, `main.vscode-cdn.net` |
-| npm | `registry.npmjs.org` |
-| PyPI | `pypi.org`, `files.pythonhosted.org` |
+| Service | Domains | Methods |
+|---------|---------|---------|
+| GitHub | `github.com`, `*.github.com`, `*.githubusercontent.com` | all |
+| Claude / Anthropic | `*.anthropic.com`, `*.claude.ai`, `*.claude.com` | all |
+| VS Code | `update.code.visualstudio.com`, `marketplace.visualstudio.com`, `*.vsassets.io`, `main.vscode-cdn.net` | GET |
+| npm | `registry.npmjs.org` | GET |
+| PyPI | `pypi.org`, `files.pythonhosted.org` | GET |
 
-You may need to add domains for your stack. Common additions:
+Common additions for other stacks:
 
 | Stack | Domains |
 |-------|---------|

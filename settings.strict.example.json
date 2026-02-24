@@ -26,12 +26,12 @@
     {"action": "allow", "host": "*.anthropic.com"},
     {"action": "allow", "host": "*.claude.ai"},
     {"action": "allow", "host": "*.claude.com"},
-    {"action": "allow", "host": "update.code.visualstudio.com"},
-    {"action": "allow", "host": "marketplace.visualstudio.com"},
-    {"action": "allow", "host": "*.vsassets.io"},
-    {"action": "allow", "host": "main.vscode-cdn.net"},
-    {"action": "allow", "host": "registry.npmjs.org"},
-    {"action": "allow", "host": "pypi.org"},
-    {"action": "allow", "host": "files.pythonhosted.org"}
+    {"action": "allow", "host": "update.code.visualstudio.com", "method": "GET"},
+    {"action": "allow", "host": "marketplace.visualstudio.com", "method": "GET"},
+    {"action": "allow", "host": "*.vsassets.io", "method": "GET"},
+    {"action": "allow", "host": "main.vscode-cdn.net", "method": "GET"},
+    {"action": "allow", "host": "registry.npmjs.org", "method": "GET"},
+    {"action": "allow", "host": "pypi.org", "method": "GET"},
+    {"action": "allow", "host": "files.pythonhosted.org", "method": "GET"}
   ]
 }
