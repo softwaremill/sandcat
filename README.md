@@ -558,13 +558,12 @@ The mitmproxy addon writes `env` entries to the shared env file (alongside
 secret placeholders), and `app-user-init.sh` applies
 `GIT_USER_NAME`/`GIT_USER_EMAIL` via `git config --global` at container startup.
 
-**HTTPS remotes only.** With `SSH_AUTH_SOCK` cleared, SSH-based git remotes will
-not work. Use HTTPS URLs instead — sandcat's secret substitution handles GitHub
-token authentication over HTTPS transparently. Convert existing remotes with:
-
-```sh
-git remote set-url origin https://github.com/owner/repo.git
-```
+**HTTPS remotes only.** SSH-based git operations won't work — `SSH_AUTH_SOCK` is
+cleared and credential sockets are removed, so no SSH keys are available. The
+entrypoint automatically rewrites GitHub SSH URLs to HTTPS via `git config
+url.*.insteadOf`, so existing `git@github.com:` remotes work without manual
+changes. Sandcat's secret substitution handles GitHub token authentication over
+HTTPS transparently.
 
 ## Testing the proxy
 
