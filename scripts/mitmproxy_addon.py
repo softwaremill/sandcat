@@ -3,8 +3,13 @@ mitmproxy addon: network access rules and secret substitution.
 
 Loaded via: mitmweb -s /scripts/mitmproxy_addon.py
 
-On startup, reads /config/settings.json. Network rules (evaluated
-top-to-bottom, first match wins, default deny) gate every request.
+On startup, reads settings from up to three layers (lowest to highest
+precedence): user (~/.config/sandcat/settings.json), project
+(.sandcat/settings.json), and local (.sandcat/settings.local.json).
+Env vars and secrets are merged (higher precedence wins on conflict).
+Network rules are concatenated (highest precedence first).
+
+Network rules are evaluated top-to-bottom, first match wins, default deny.
 Secret placeholders are replaced with real values only for allowed hosts.
 """
 
@@ -15,7 +20,12 @@ from fnmatch import fnmatch
 
 from mitmproxy import ctx, http
 
-SETTINGS_PATH = "/config/settings.json"
+# Settings layers, lowest to highest precedence.
+SETTINGS_PATHS = [
+    "/config/settings.json",                # user:    ~/.config/sandcat/settings.json
+    "/config/project/settings.json",        # project: .sandcat/settings.json
+    "/config/project/settings.local.json",  # local:   .sandcat/settings.local.json
+]
 SANDCAT_ENV_PATH = "/home/mitmproxy/.mitmproxy/sandcat.env"
 
 logger = logging.getLogger(__name__)
@@ -27,16 +37,48 @@ class SandcatAddon:
         self.env: dict[str, str] = {}  # non-secret env vars
 
     def load(self, loader):
-        if not os.path.isfile(SETTINGS_PATH):
-            logger.info("No settings.json found — addon disabled")
+        layers = []
+        for path in SETTINGS_PATHS:
+            if os.path.isfile(path):
+                with open(path) as f:
+                    layers.append(json.load(f))
+
+        if not layers:
+            logger.info("No settings files found — addon disabled")
             return
 
-        with open(SETTINGS_PATH) as f:
-            raw = json.load(f)
+        merged = self._merge_settings(layers)
 
-        self.env = raw.get("env", {})
-        self._load_secrets(raw.get("secrets", {}))
-        self._load_network_rules(raw.get("network", []))
+        self.env = merged["env"]
+        self._load_secrets(merged["secrets"])
+        self._load_network_rules(merged["network"])
+        self._write_placeholders_env()
+
+        ctx.log.info(
+            f"Loaded {len(self.env)} env var(s) and {len(self.secrets)} secret(s), wrote {SANDCAT_ENV_PATH}"
+        )
+
+    @staticmethod
+    def _merge_settings(layers: list[dict]) -> dict:
+        """Merge settings from multiple layers (lowest to highest precedence).
+
+        - env: dict merge, higher precedence overwrites.
+        - secrets: dict merge, higher precedence overwrites.
+        - network: concatenated, highest precedence first.
+        """
+        env: dict[str, str] = {}
+        secrets: dict[str, dict] = {}
+        network: list[dict] = []
+
+        for layer in layers:
+            env.update(layer.get("env", {}))
+            secrets.update(layer.get("secrets", {}))
+
+        # Network rules: highest-precedence layer's rules come first.
+        for layer in reversed(layers):
+            network.extend(layer.get("network", []))
+
+        return {"env": env, "secrets": secrets, "network": network}
 
     def _load_secrets(self, raw_secrets: dict):
         for name, entry in raw_secrets.items():
@@ -46,12 +88,6 @@ class SandcatAddon:
                 "hosts": entry.get("hosts", []),
                 "placeholder": placeholder,
             }
-
-        self._write_placeholders_env()
-
-        ctx.log.info(
-            f"Loaded {len(self.env)} env var(s) and {len(self.secrets)} secret(s), wrote {SANDCAT_ENV_PATH}"
-        )
 
     def _load_network_rules(self, raw_rules: list):
         self.network_rules = raw_rules

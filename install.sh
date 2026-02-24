@@ -92,6 +92,7 @@ curl -fsSL "$REPO_URL/compose-all.yml" \
     -e "s|^  - path: compose-proxy.yml|  - path: sandcat/compose-proxy.yml|" \
     -e "s|\.:/workspaces/sandcat:cached|..:/workspaces/$PROJECT_NAME:cached|" \
     -e "s|\./.devcontainer:/workspaces/sandcat/.devcontainer:ro|../.devcontainer:/workspaces/$PROJECT_NAME/.devcontainer:ro|" \
+    -e "s|\./\.sandcat:/config/project:ro|../.sandcat:/config/project:ro|" \
   > .devcontainer/compose-all.yml
 
 # Dockerfile.app: adjust COPY paths, add CUSTOMIZE marker
@@ -124,6 +125,7 @@ verify "^name: $PROJECT_NAME" .devcontainer/compose-all.yml
 verify "path: sandcat/compose-proxy.yml" .devcontainer/compose-all.yml
 verify "/workspaces/$PROJECT_NAME:cached" .devcontainer/compose-all.yml
 verify "/workspaces/$PROJECT_NAME/.devcontainer:ro" .devcontainer/compose-all.yml
+verify "../.sandcat:/config/project:ro" .devcontainer/compose-all.yml
 verify "sandcat/scripts/app-init.sh" .devcontainer/Dockerfile.app
 verify "\"compose-all.yml\"" .devcontainer/devcontainer.json
 verify "/workspaces/$PROJECT_NAME\"" .devcontainer/devcontainer.json
@@ -147,10 +149,14 @@ echo ""
 echo "Next steps:"
 echo "  1. Customize .devcontainer/Dockerfile.app — look for the CUSTOMIZE"
 echo "     marker to add your language toolchain (python, rust, java, etc.)."
-echo "  2. Set up your secrets and network rules:"
+echo "  2. Set up your user secrets (API keys, git identity):"
 echo "     mkdir -p ~/.config/sandcat"
 echo "     cp .devcontainer/sandcat/settings.example.json ~/.config/sandcat/settings.json"
 echo "     # Edit with your real values"
-echo "  3. Open the project in VS Code and reopen in the dev container,"
+echo "  3. (Optional) Add project-level network rules:"
+echo "     mkdir -p .sandcat"
+echo "     echo '{\"network\": [{\"action\": \"allow\", \"host\": \"*.github.com\"}]}' > .sandcat/settings.json"
+echo "     echo '.sandcat/settings.local.json' >> .gitignore"
+echo "  4. Open the project in VS Code and reopen in the dev container,"
 echo "     or start from the command line:"
 echo "     docker compose -f .devcontainer/compose-all.yml run --rm --build app bash"
