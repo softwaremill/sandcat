@@ -19,6 +19,12 @@ fi
 # repo-level config.
 git config --global commit.gpgsign false
 
+# SSH is blocked (port 22 doesn't go through the HTTP proxy), so rewrite
+# git SSH URLs to HTTPS. Sandcat's secret substitution handles GitHub
+# token authentication over HTTPS transparently.
+git config --global url."https://github.com/".insteadOf "git@github.com:"
+git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+
 # If Java is installed (via mise), import the mitmproxy CA into Java's trust
 # store. Java uses its own cacerts and ignores the system CA store.
 CA_CERT="/mitmproxy-config/mitmproxy-ca-cert.pem"
