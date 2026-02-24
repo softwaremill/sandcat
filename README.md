@@ -31,7 +31,8 @@ Create a user settings file with your secrets:
 
 ```sh
 mkdir -p ~/.config/sandcat
-cp settings.example.json ~/.config/sandcat/settings.json
+# Choose a template: liberal (allows all GET) or strict (explicit hosts only)
+cp settings.liberal.example.json ~/.config/sandcat/settings.json
 # Edit with your real values
 ```
 
@@ -69,7 +70,8 @@ All three methods produce the same target directory layout:
 │   │   ├── app-user-init.sh
 │   │   ├── mitmproxy_addon.py
 │   │   └── wg-client-init.sh
-│   └── settings.example.json
+│   ├── settings.liberal.example.json
+│   └── settings.strict.example.json
 ├── compose-all.yml         # project-specific (customize)
 ├── Dockerfile.app          # project-specific (customize)
 └── devcontainer.json       # project-specific (customize)
@@ -219,10 +221,12 @@ With these files, the merged network rules are (local first, then project, then
 user): allow `internal.corp.dev`, then the project rules. Env and secrets come
 from the user file since neither project file defines them.
 
-Warning: allowing all GET-traffic, all traffic from GitHub or in fact any
-not-fully-trusted/controlled site, leaves the possibility of a prompt injection
-attack. Blocking `POST`-traffic might prevent code from being exfiltrated, but
-malicious code might still be generated as part of the project.
+Warning: the liberal template allows all GET traffic, which means the agent can
+read arbitrary web content — a vector for prompt injection. The strict template
+narrows this to known service domains, but both templates allow full access to
+GitHub, which can be used to read untrusted content (prompt injection) or push
+data out (exfiltration). Malicious code might also be generated as part of the
+project itself.
 
 ## Network access rules
 
@@ -235,14 +239,59 @@ Each rule has:
 - `host` — glob pattern via fnmatch (required)
 - `method` — HTTP method to match; omit to match any method (optional)
 
+### Templates
+
+Sandcat ships two example configurations. Copy one to get started and adjust to
+your needs:
+
+**`settings.liberal.example.json`** — allows all HTTP GET requests to any host,
+plus full access (all methods) to GitHub and Anthropic/Claude. Convenient for
+development but means the agent can read arbitrary web content, which is a
+prompt injection vector:
+
+```sh
+cp settings.liberal.example.json ~/.config/sandcat/settings.json
+```
+
+**`settings.strict.example.json`** — allows only listed service domains. Full
+access (all methods) is limited to GitHub and Anthropic/Claude, which need POST
+for pushing code and API calls. All other domains are GET-only (downloads,
+package installs). You may need to add domains for your specific stack:
+
+```sh
+cp settings.strict.example.json ~/.config/sandcat/settings.json
+```
+
+The strict template narrows the attack surface compared to the liberal one, but
+does not eliminate it: the agent can still read arbitrary content from GitHub
+(issues, PRs, repository files) and write to it (commits, comments), which
+remains a prompt injection and data exfiltration vector.
+
+The strict template includes:
+
+| Service | Domains | Methods |
+|---------|---------|---------|
+| GitHub | `github.com`, `*.github.com`, `*.githubusercontent.com` | all |
+| Claude / Anthropic | `*.anthropic.com`, `*.claude.ai`, `*.claude.com` | all |
+| VS Code | `update.code.visualstudio.com`, `marketplace.visualstudio.com`, `*.vsassets.io`, `main.vscode-cdn.net` | GET |
+| npm | `registry.npmjs.org` | GET |
+| PyPI | `pypi.org`, `files.pythonhosted.org` | GET |
+
+Common additions for other stacks:
+
+| Stack | Domains |
+|-------|---------|
+| Rust / Cargo | `crates.io`, `static.crates.io` |
+| Java / Maven | `repo.maven.apache.org`, `repo1.maven.org` |
+| JetBrains | `plugins.jetbrains.com`, `downloads.marketplace.jetbrains.com` |
+
 ### Examples
 
-With the rules above:
+With the liberal template rules:
 - `GET` to any host → **allowed** (rule 1)
 - `POST` to `api.github.com` → **allowed** (rule 2)
-- `POST` to `api.anthropic.com` → **allowed** (rule 3)
+- `POST` to `api.anthropic.com` → **allowed** (rule 4)
 - `POST` to `example.com` → **denied**
-- `PUT` to `example.com` → **denied**
 - Empty network list → all requests **denied** (default deny)
 
 ## Secret substitution
