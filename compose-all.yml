@@ -6,9 +6,13 @@ include:
 services:
   mitmproxy:
     volumes:
-      # Project-level settings (.sandcat/ directory). If the directory does
-      # not exist on the host, Docker creates an empty one and the addon
-      # simply finds no files — no error.
+      # Project-level settings (.sandcat/ directory). This lives here
+      # rather than in compose-proxy.yml because relative paths resolve
+      # relative to the compose file's location — when installed via the
+      # install script, compose-proxy.yml is at .devcontainer/sandcat/
+      # and cannot reach the project root's .sandcat/ reliably.
+      # If the directory does not exist on the host, Docker creates an
+      # empty one and the addon simply finds no files — no error.
       - ./.sandcat:/config/project:ro
 
   app:

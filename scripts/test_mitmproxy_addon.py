@@ -44,6 +44,7 @@ sys.modules["mitmproxy.http"] = _http
 sys.modules["mitmproxy"].ctx = _ctx
 sys.modules["mitmproxy"].http = _http
 
+# Import after mitmproxy stubs are installed in sys.modules above.
 from mitmproxy_addon import SandcatAddon, SETTINGS_PATHS  # noqa: E402
 
 
