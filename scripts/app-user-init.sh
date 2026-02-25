@@ -23,8 +23,8 @@ git config --global commit.gpgsign false
 # and credential sockets are removed), so rewrite git SSH URLs to HTTPS.
 # Sandcat's secret substitution handles GitHub token authentication over
 # HTTPS transparently.
-git config --global url."https://github.com/".insteadOf "git@github.com:"
-git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+git config --global --replace-all url."https://github.com/".insteadOf "git@github.com:" "git@github.com:"
+git config --global --replace-all url."https://github.com/".insteadOf "ssh://git@github.com/" "ssh://git@github.com/"
 
 # If Java is installed (via mise), import the mitmproxy CA into Java's trust
 # store. Java uses its own cacerts and ignores the system CA store.
