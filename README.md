@@ -587,6 +587,30 @@ curl --max-time 3 --interface eth0 http://1.1.1.1
 iptables -F OUTPUT
 ```
 
+To verify Docker-internal traffic works (e.g. a database or app service added to the
+compose file):
+
+```sh
+# Should succeed — Docker network traffic is allowed
+curl --max-time 3 http://my-service:8080
+```
+
+To verify host access is blocked:
+
+```sh
+# Should fail — gateway (host) is blocked
+docker_gateway=$(ip -4 route show default dev eth0 | awk '{print $3}')
+curl --max-time 3 "http://$docker_gateway"
+```
+
+To verify direct mitmproxy access is blocked:
+
+```sh
+# Should fail — mitmproxy container is only reachable via WireGuard
+mitmproxy_ip=$(getent hosts mitmproxy | awk '{print $1}')
+curl --max-time 3 "http://$mitmproxy_ip:8081"
+```
+
 To verify secret substitution for the GitHub token:
 
 ```sh
