@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # shellcheck source=constants.bash
-source "$AGB_LIBDIR/constants.bash"
+source "$SCT_LIBDIR/constants.bash"
 
 # Verifies that a file exists in relative path from a directory file.
 # Args:
@@ -33,14 +33,14 @@ verify_relative_path() {
 }
 
 # Finds the repository root directory by walking up the directory tree.
-# Looks for $AGB_PROJECT_DIR directory, .git directory, or .devcontainer directory.
+# Looks for $SCT_PROJECT_DIR directory, .git directory, or .devcontainer directory.
 # Returns the absolute path to the root directory.
 find_repo_root() {
 	local current_dir="${1:-$PWD}"
 
 	while [[ "$current_dir" != "/" ]]
 	do
-		if [[ -d "$current_dir/$AGB_PROJECT_DIR" ]] || \
+		if [[ -d "$current_dir/$SCT_PROJECT_DIR" ]] || \
 			[[ -d "$current_dir/.git" ]] || \
 			[[ -d "$current_dir/.devcontainer" ]]
 		then
@@ -57,7 +57,7 @@ find_repo_root() {
 
 # Locates the docker-compose.yml file for the project.
 # Checks in priority order:
-# 1. $repo_root/$AGB_PROJECT_DIR/docker-compose.yml
+# 1. $repo_root/$SCT_PROJECT_DIR/docker-compose.yml
 # 2. $repo_root/.devcontainer/docker-compose.yml
 # Returns the absolute path to the compose file.
 # Exits with error if neither file exists.
@@ -65,7 +65,7 @@ find_compose_file() {
 	local repo_root
 	repo_root="$(find_repo_root)"
 
-	local project_compose="$repo_root/$AGB_PROJECT_DIR/docker-compose.yml"
+	local project_compose="$repo_root/$SCT_PROJECT_DIR/docker-compose.yml"
 	local devcontainer_compose="$repo_root/.devcontainer/docker-compose.yml"
 
 	if [[ -f "$project_compose" ]]

@@ -6,14 +6,14 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../libexec/init/cli
-	source "$AGB_LIBEXECDIR/init/cli"
+	source "$SCT_LIBEXECDIR/init/cli"
 	# shellcheck source=../../libexec/init/devcontainer
-	source "$AGB_LIBEXECDIR/init/devcontainer"
+	source "$SCT_LIBEXECDIR/init/devcontainer"
 
 	PROJECT_DIR="$BATS_TEST_TMPDIR/project"
-	mkdir -p "$PROJECT_DIR/$AGB_PROJECT_DIR"
+	mkdir -p "$PROJECT_DIR/$SCT_PROJECT_DIR"
 
-	POLICY_FILE="$AGB_PROJECT_DIR/policy.yaml"
+	POLICY_FILE="$SCT_PROJECT_DIR/policy.yaml"
 	touch "$PROJECT_DIR/$POLICY_FILE"
 }
 
@@ -61,7 +61,7 @@ assert_common_volumes() {
 
 	yq -e '.services.agent.volumes[] | select(. == "..:/workspace")' "$compose_file"
 
-	yq -e '.services.agent.volumes[] | select(. == "../.agent-sandbox:/workspace/.agent-sandbox:ro")' "$compose_file"
+	yq -e '.services.agent.volumes[] | select(. == "../.sandcat:/workspace/.sandcat:ro")' "$compose_file"
 
 	yq -e '.services.agent.volumes[] | select(. == "proxy-ca:/etc/mitmproxy:ro")' "$compose_file"
 }
@@ -80,13 +80,13 @@ assert_named_volumes() {
 assert_customization_volumes() {
 	local compose_file=$1
 
-	yq -e '.services.proxy.volumes[] | select(. == "../'"$AGB_PROJECT_DIR"'/policy.yaml:/etc/mitmproxy/policy.yaml:ro")' "$compose_file"
+	yq -e '.services.proxy.volumes[] | select(. == "../'"$SCT_PROJECT_DIR"'/policy.yaml:/etc/mitmproxy/policy.yaml:ro")' "$compose_file"
 
 	# shellcheck disable=SC2016
-	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.config/agent-sandbox/shell.d:/home/dev/.config/agent-sandbox/shell.d:ro")' "$compose_file"
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.config/sandcat/shell.d:/home/dev/.config/sandcat/shell.d:ro")' "$compose_file"
 
 	# shellcheck disable=SC2016
-	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.config/agent-sandbox/dotfiles:/home/dev/.dotfiles:ro")' "$compose_file"
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.config/sandcat/dotfiles:/home/dev/.dotfiles:ro")' "$compose_file"
 
 	yq -e '.services.agent.volumes[] | select(. == "../.git:/workspace/.git:ro")' "$compose_file"
 
@@ -114,8 +114,8 @@ claude_agent_compose_file_has_expected_content() {
 
 	assert [ -f "$compose_file" ]
 
-	assert_proxy_service "$compose_file" "ghcr.io/mattolson/agent-sandbox-proxy@sha256:abc123"
-	assert_agent_service_base "$compose_file" "ghcr.io/mattolson/agent-sandbox-claude@sha256:def456"
+	assert_proxy_service "$compose_file" "ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123"
+	assert_agent_service_base "$compose_file" "ghcr.io/VirtusLab/sandcat-claude@sha256:def456"
 
 	yq -e '.services.agent.environment[] | select(. == "CLAUDE_CONFIG_DIR=/home/dev/.claude")' "$compose_file"
 
@@ -141,8 +141,8 @@ copilot_agent_compose_file_has_expected_content() {
 
 	assert [ -f "$compose_file" ]
 
-	assert_proxy_service "$compose_file" "ghcr.io/mattolson/agent-sandbox-proxy@sha256:abc123"
-	assert_agent_service_base "$compose_file" "ghcr.io/mattolson/agent-sandbox-copilot@sha256:ghi789"
+	assert_proxy_service "$compose_file" "ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123"
+	assert_agent_service_base "$compose_file" "ghcr.io/VirtusLab/sandcat-copilot@sha256:ghi789"
 	assert_common_environment_vars "$compose_file"
 	assert_common_volumes "$compose_file"
 
@@ -158,47 +158,47 @@ copilot_agent_compose_file_has_expected_content() {
 }
 
 @test "cli creates docker-compose.yml for claude agent with all options enabled" {
-	export AGENTBOX_PROXY_IMAGE="ghcr.io/mattolson/agent-sandbox-proxy:latest"
-	export AGENTBOX_AGENT_IMAGE="ghcr.io/mattolson/agent-sandbox-claude:latest"
-	export AGENTBOX_MOUNT_CLAUDE_CONFIG="true"
-	export AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS="true"
-	export AGENTBOX_ENABLE_DOTFILES="true"
-	export AGENTBOX_MOUNT_GIT_READONLY="true"
-	export AGENTBOX_MOUNT_IDEA_READONLY="true"
-	export AGENTBOX_MOUNT_VSCODE_READONLY="true"
+	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
+	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-claude:latest"
+	export SANDCAT_MOUNT_CLAUDE_CONFIG="true"
+	export SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS="true"
+	export SANDCAT_ENABLE_DOTFILES="true"
+	export SANDCAT_MOUNT_GIT_READONLY="true"
+	export SANDCAT_MOUNT_IDEA_READONLY="true"
+	export SANDCAT_MOUNT_VSCODE_READONLY="true"
 
 	unset -f pull_and_pin_image
 	stub pull_and_pin_image \
-		"ghcr.io/mattolson/agent-sandbox-proxy:latest : echo 'ghcr.io/mattolson/agent-sandbox-proxy@sha256:abc123'" \
-		"ghcr.io/mattolson/agent-sandbox-claude:latest : echo 'ghcr.io/mattolson/agent-sandbox-claude@sha256:def456'"
+		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
+		"ghcr.io/VirtusLab/sandcat-claude:latest : echo 'ghcr.io/VirtusLab/sandcat-claude@sha256:def456'"
 
 	run cli \
 		--policy-file "$POLICY_FILE" \
 		--project-path "$PROJECT_DIR" \
 		--agent "claude"
 	assert_success
-	assert_output --regexp ".*Compose file created at $PROJECT_DIR/$AGB_PROJECT_DIR/docker-compose.yml"
+	assert_output --regexp ".*Compose file created at $PROJECT_DIR/$SCT_PROJECT_DIR/docker-compose.yml"
 
-	run yq '.name' "$PROJECT_DIR/$AGB_PROJECT_DIR/docker-compose.yml"
+	run yq '.name' "$PROJECT_DIR/$SCT_PROJECT_DIR/docker-compose.yml"
 	assert_output "project-sandbox"
 
-	claude_agent_compose_file_has_expected_content "$PROJECT_DIR/$AGB_PROJECT_DIR/docker-compose.yml"
+	claude_agent_compose_file_has_expected_content "$PROJECT_DIR/$SCT_PROJECT_DIR/docker-compose.yml"
 }
 
 @test "devcontainer creates docker-compose.yml for claude agent with all options enabled" {
-	export AGENTBOX_PROXY_IMAGE="ghcr.io/mattolson/agent-sandbox-proxy:latest"
-	export AGENTBOX_AGENT_IMAGE="ghcr.io/mattolson/agent-sandbox-claude:latest"
-	export AGENTBOX_MOUNT_CLAUDE_CONFIG="true"
-	export AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS="true"
-	export AGENTBOX_ENABLE_DOTFILES="true"
-	export AGENTBOX_MOUNT_GIT_READONLY="true"
-	export AGENTBOX_MOUNT_IDEA_READONLY="true"
-	export AGENTBOX_MOUNT_VSCODE_READONLY="true"
+	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
+	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-claude:latest"
+	export SANDCAT_MOUNT_CLAUDE_CONFIG="true"
+	export SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS="true"
+	export SANDCAT_ENABLE_DOTFILES="true"
+	export SANDCAT_MOUNT_GIT_READONLY="true"
+	export SANDCAT_MOUNT_IDEA_READONLY="true"
+	export SANDCAT_MOUNT_VSCODE_READONLY="true"
 
 	unset -f pull_and_pin_image
 	stub pull_and_pin_image \
-		"ghcr.io/mattolson/agent-sandbox-proxy:latest : echo 'ghcr.io/mattolson/agent-sandbox-proxy@sha256:abc123'" \
-		"ghcr.io/mattolson/agent-sandbox-claude:latest : echo 'ghcr.io/mattolson/agent-sandbox-claude@sha256:def456'"
+		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
+		"ghcr.io/VirtusLab/sandcat-claude:latest : echo 'ghcr.io/VirtusLab/sandcat-claude@sha256:def456'"
 
 	run devcontainer \
 		--policy-file "$POLICY_FILE" \
@@ -218,45 +218,45 @@ copilot_agent_compose_file_has_expected_content() {
 }
 
 @test "cli creates docker-compose.yml for copilot agent with all options enabled" {
-	export AGENTBOX_PROXY_IMAGE="ghcr.io/mattolson/agent-sandbox-proxy:latest"
-	export AGENTBOX_AGENT_IMAGE="ghcr.io/mattolson/agent-sandbox-copilot:latest"
-	export AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS="true"
-	export AGENTBOX_ENABLE_DOTFILES="true"
-	export AGENTBOX_MOUNT_GIT_READONLY="true"
-	export AGENTBOX_MOUNT_IDEA_READONLY="true"
-	export AGENTBOX_MOUNT_VSCODE_READONLY="true"
+	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
+	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-copilot:latest"
+	export SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS="true"
+	export SANDCAT_ENABLE_DOTFILES="true"
+	export SANDCAT_MOUNT_GIT_READONLY="true"
+	export SANDCAT_MOUNT_IDEA_READONLY="true"
+	export SANDCAT_MOUNT_VSCODE_READONLY="true"
 
 	unset -f pull_and_pin_image
 	stub pull_and_pin_image \
-		"ghcr.io/mattolson/agent-sandbox-proxy:latest : echo 'ghcr.io/mattolson/agent-sandbox-proxy@sha256:abc123'" \
-		"ghcr.io/mattolson/agent-sandbox-copilot:latest : echo 'ghcr.io/mattolson/agent-sandbox-copilot@sha256:ghi789'"
+		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
+		"ghcr.io/VirtusLab/sandcat-copilot:latest : echo 'ghcr.io/VirtusLab/sandcat-copilot@sha256:ghi789'"
 
 	run cli \
 		--policy-file "$POLICY_FILE" \
 		--project-path "$PROJECT_DIR" \
 		--agent "copilot"
 	assert_success
-	assert_output --regexp ".*Compose file created at $PROJECT_DIR/$AGB_PROJECT_DIR/docker-compose.yml"
+	assert_output --regexp ".*Compose file created at $PROJECT_DIR/$SCT_PROJECT_DIR/docker-compose.yml"
 
-	run yq '.name' "$PROJECT_DIR/$AGB_PROJECT_DIR/docker-compose.yml"
+	run yq '.name' "$PROJECT_DIR/$SCT_PROJECT_DIR/docker-compose.yml"
 	assert_output "project-sandbox"
 
-	copilot_agent_compose_file_has_expected_content "$PROJECT_DIR/$AGB_PROJECT_DIR/docker-compose.yml"
+	copilot_agent_compose_file_has_expected_content "$PROJECT_DIR/$SCT_PROJECT_DIR/docker-compose.yml"
 }
 
 @test "devcontainer creates docker-compose.yml for copilot agent with all options enabled" {
-	export AGENTBOX_PROXY_IMAGE="ghcr.io/mattolson/agent-sandbox-proxy:latest"
-	export AGENTBOX_AGENT_IMAGE="ghcr.io/mattolson/agent-sandbox-copilot:latest"
-	export AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS="true"
-	export AGENTBOX_ENABLE_DOTFILES="true"
-	export AGENTBOX_MOUNT_GIT_READONLY="true"
-	export AGENTBOX_MOUNT_IDEA_READONLY="true"
-	export AGENTBOX_MOUNT_VSCODE_READONLY="true"
+	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
+	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-copilot:latest"
+	export SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS="true"
+	export SANDCAT_ENABLE_DOTFILES="true"
+	export SANDCAT_MOUNT_GIT_READONLY="true"
+	export SANDCAT_MOUNT_IDEA_READONLY="true"
+	export SANDCAT_MOUNT_VSCODE_READONLY="true"
 
 	unset -f pull_and_pin_image
 	stub pull_and_pin_image \
-		"ghcr.io/mattolson/agent-sandbox-proxy:latest : echo 'ghcr.io/mattolson/agent-sandbox-proxy@sha256:abc123'" \
-		"ghcr.io/mattolson/agent-sandbox-copilot:latest : echo 'ghcr.io/mattolson/agent-sandbox-copilot@sha256:ghi789'"
+		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
+		"ghcr.io/VirtusLab/sandcat-copilot:latest : echo 'ghcr.io/VirtusLab/sandcat-copilot@sha256:ghi789'"
 
 	run devcontainer \
 		--policy-file "$POLICY_FILE" \

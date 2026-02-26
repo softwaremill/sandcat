@@ -3,7 +3,7 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../lib/select.bash
-	source "$AGB_LIBDIR/select.bash"
+	source "$SCT_LIBDIR/select.bash"
 }
 
 teardown() {

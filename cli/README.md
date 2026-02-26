@@ -1,6 +1,6 @@
 # Agent Sandbox CLI
 
-Command-line tool for managing agent-sandbox configurations and Docker Compose setups.
+Command-line tool for managing sandcat configurations and Docker Compose setups.
 
 Requires `docker` (and `docker compose`) and [`yq`](https://github.com/mikefarah/yq).
 
@@ -8,7 +8,7 @@ Requires `docker` (and `docker compose`) and [`yq`](https://github.com/mikefarah
 
 ### `agentbox init`
 
-Initializes agent-sandbox for a project. Prompts for any options not provided via flags, then sets up the necessary
+Initializes sandcat for a project. Prompts for any options not provided via flags, then sets up the necessary
 configuration files and network policy. Optional volume mounts (Claude config, shell customizations, dotfiles, .git,
 .idea, .vscode) are included as commented-out entries in the generated compose file.
 
@@ -57,12 +57,12 @@ Arguments:
 
 ### `agentbox destroy`
 
-Removes all agent-sandbox configuration and containers from a project. Stops running containers, removes volumes, and
+Removes all sandcat configuration and containers from a project. Stops running containers, removes volumes, and
 deletes configuration directories.
 
 ### `agentbox version`
 
-Displays the current version of agent-sandbox.
+Displays the current version of sandcat.
 
 ### `agentbox compose`
 
@@ -74,7 +74,7 @@ Runs docker compose commands with the correct compose file automatically detecte
 Opens the Docker Compose file in your editor. If you save changes and containers are running, it will restart containers by default to apply the changes.
 
 Options:
-- `--no-restart` — Do not automatically restart containers after changes. When set (or when `AGENTBOX_NO_RESTART=true`), a warning is shown instead with instructions to run `agentbox up -d` manually.
+- `--no-restart` — Do not automatically restart containers after changes. When set (or when `SANDCAT_NO_RESTART=true`), a warning is shown instead with instructions to run `agentbox up -d` manually.
 
 ### `agentbox edit policy`
 
@@ -112,20 +112,20 @@ cli/
 
 ### Internal (set by the CLI)
 
-- `AGB_ROOT` - Root directory of agent-sandbox CLI
-- `AGB_LIBDIR` - Library directory (default: `$AGB_ROOT/lib`)
-- `AGB_LIBEXECDIR` - Directory for module implementations (default: `$AGB_ROOT/libexec`)
-- `AGB_TEMPLATEDIR` - Directory for templates (default: `$AGB_ROOT/templates`)
+- `SCT_ROOT` - Root directory of sandcat CLI
+- `SCT_LIBDIR` - Library directory (default: `$SCT_ROOT/lib`)
+- `SCT_LIBEXECDIR` - Directory for module implementations (default: `$SCT_ROOT/libexec`)
+- `SCT_TEMPLATEDIR` - Directory for templates (default: `$SCT_ROOT/templates`)
 
 ### Configuration (set before running `agentbox init`)
 
 These override defaults during compose file generation. Optional volumes default to `false` (commented out).
 
-- `AGENTBOX_PROXY_IMAGE` - Docker image for proxy service (default: latest published proxy image)
-- `AGENTBOX_AGENT_IMAGE` - Docker image for agent service (default: latest published agent image)
-- `AGENTBOX_MOUNT_CLAUDE_CONFIG` - `true` to mount host `~/.claude` config (Claude agent only)
-- `AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS` - `true` to mount `~/.config/agent-sandbox/shell.d`
-- `AGENTBOX_ENABLE_DOTFILES` - `true` to mount `~/.config/agent-sandbox/dotfiles`
-- `AGENTBOX_MOUNT_GIT_READONLY` - `true` to mount `.git/` directory as read-only
-- `AGENTBOX_MOUNT_IDEA_READONLY` - `true` to mount `.idea/` directory as read-only (JetBrains)
-- `AGENTBOX_MOUNT_VSCODE_READONLY` - `true` to mount `.vscode/` directory as read-only (VS Code)
+- `SANDCAT_PROXY_IMAGE` - Docker image for proxy service (default: latest published proxy image)
+- `SANDCAT_AGENT_IMAGE` - Docker image for agent service (default: latest published agent image)
+- `SANDCAT_MOUNT_CLAUDE_CONFIG` - `true` to mount host `~/.claude` config (Claude agent only)
+- `SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS` - `true` to mount `~/.config/sandcat/shell.d`
+- `SANDCAT_ENABLE_DOTFILES` - `true` to mount `~/.config/sandcat/dotfiles`
+- `SANDCAT_MOUNT_GIT_READONLY` - `true` to mount `.git/` directory as read-only
+- `SANDCAT_MOUNT_IDEA_READONLY` - `true` to mount `.idea/` directory as read-only (JetBrains)
+- `SANDCAT_MOUNT_VSCODE_READONLY` - `true` to mount `.vscode/` directory as read-only (VS Code)

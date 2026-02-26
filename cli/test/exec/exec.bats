@@ -4,8 +4,8 @@ setup() {
 	load test_helper
 
 	# Create a mock run-compose script
-	export AGB_LIBDIR="$BATS_TEST_TMPDIR/lib"
-	mkdir -p "$AGB_LIBDIR"
+	export SCT_LIBDIR="$BATS_TEST_TMPDIR/lib"
+	mkdir -p "$SCT_LIBDIR"
 
 	# shellcheck source=../../libexec/exec/exec
 	source "$BATS_TEST_DIRNAME/../../libexec/exec/exec"
@@ -17,7 +17,7 @@ teardown() {
 
 @test "exec starts containers when agent is not running" {
 	# run-compose ps returns empty (agent not running)
-	cat > "$AGB_LIBDIR/run-compose" <<'SCRIPT'
+	cat > "$SCT_LIBDIR/run-compose" <<'SCRIPT'
 #!/usr/bin/env bash
 cmd="$1"; shift
 case "$cmd" in
@@ -26,7 +26,7 @@ case "$cmd" in
 	exec) echo "run-compose exec $*" ;;
 esac
 SCRIPT
-	chmod +x "$AGB_LIBDIR/run-compose"
+	chmod +x "$SCT_LIBDIR/run-compose"
 
 	# Override exec to avoid replacing the test process
 	exec() { "$@"; }
@@ -37,7 +37,7 @@ SCRIPT
 }
 
 @test "exec skips up when agent is already running" {
-	cat > "$AGB_LIBDIR/run-compose" <<'SCRIPT'
+	cat > "$SCT_LIBDIR/run-compose" <<'SCRIPT'
 #!/usr/bin/env bash
 cmd="$1"; shift
 case "$cmd" in
@@ -46,7 +46,7 @@ case "$cmd" in
 	exec) echo "run-compose exec $*" ;;
 esac
 SCRIPT
-	chmod +x "$AGB_LIBDIR/run-compose"
+	chmod +x "$SCT_LIBDIR/run-compose"
 
 	exec() { "$@"; }
 
@@ -57,7 +57,7 @@ SCRIPT
 }
 
 @test "exec passes custom shell argument" {
-	cat > "$AGB_LIBDIR/run-compose" <<'SCRIPT'
+	cat > "$SCT_LIBDIR/run-compose" <<'SCRIPT'
 #!/usr/bin/env bash
 cmd="$1"; shift
 case "$cmd" in
@@ -65,7 +65,7 @@ case "$cmd" in
 	exec) echo "run-compose exec $*" ;;
 esac
 SCRIPT
-	chmod +x "$AGB_LIBDIR/run-compose"
+	chmod +x "$SCT_LIBDIR/run-compose"
 
 	exec() { "$@"; }
 

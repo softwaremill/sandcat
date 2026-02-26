@@ -3,7 +3,7 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../lib/compat.bash
-	source "$AGB_LIBDIR/compat.bash"
+	source "$SCT_LIBDIR/compat.bash"
 }
 
 @test "mapfile reads single line into array" {
@@ -96,7 +96,7 @@ line3"
 @test "mapfile works with set -e" {
 	run bash -ec '
         export BATS_VERSION="1.5.0"
-        source "'"$AGB_LIBDIR"'/compat.bash"
+        source "'"$SCT_LIBDIR"'/compat.bash"
 
         test_mapfile() {
             local -a result

@@ -4,10 +4,10 @@ setup() {
 	load test_helper
 
 	# shellcheck source=../../libexec/edit/policy
-	source "$AGB_LIBEXECDIR/edit/policy"
+	source "$SCT_LIBEXECDIR/edit/policy"
 
-	mkdir -p "$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR"
-	POLICY_FILE="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-claude.yaml"
+	mkdir -p "$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR"
+	POLICY_FILE="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
 	touch "$POLICY_FILE"
 }
 
@@ -26,8 +26,8 @@ teardown() {
 }
 
 @test "policy filters by mode" {
-	POLICY_FILE_CLI="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-cli-claude.yaml"
-	POLICY_FILE_DEV="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-claude.yaml"
+	POLICY_FILE_CLI="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-cli-claude.yaml"
+	POLICY_FILE_DEV="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
 	touch "$POLICY_FILE_CLI" "$POLICY_FILE_DEV"
 
 	unset -f open_editor
@@ -40,8 +40,8 @@ teardown() {
 }
 
 @test "policy filters by agent" {
-	POLICY_FILE_CURSOR="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-cursor.yaml"
-	POLICY_FILE_CLAUDE="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-claude.yaml"
+	POLICY_FILE_CURSOR="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-cursor.yaml"
+	POLICY_FILE_CLAUDE="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
 	touch "$POLICY_FILE_CURSOR" "$POLICY_FILE_CLAUDE"
 
 	unset -f open_editor
@@ -54,11 +54,11 @@ teardown() {
 }
 
 @test "policy filters by mode and agent" {
-	POLICY_FILE_SPECIFIC="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-cli-cursor.yaml"
+	POLICY_FILE_SPECIFIC="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-cli-cursor.yaml"
 	touch "$POLICY_FILE_SPECIFIC" \
-		"$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-cursor.yaml" \
-		"$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-cli-claude.yaml" \
-		"$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-claude.yaml"
+		"$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-cursor.yaml" \
+		"$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-cli-claude.yaml" \
+		"$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
 
 	unset -f open_editor
 	stub open_editor \
@@ -70,8 +70,8 @@ teardown() {
 }
 
 @test "policy warns when multiple files match and uses first" {
-	POLICY_FILE_1="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-agent1.yaml"
-	POLICY_FILE_2="$BATS_TEST_TMPDIR/$AGB_PROJECT_DIR/policy-dev-agent2.yaml"
+	POLICY_FILE_1="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-agent1.yaml"
+	POLICY_FILE_2="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-agent2.yaml"
 	touch "$POLICY_FILE_1" "$POLICY_FILE_2"
 
 	unset -f open_editor

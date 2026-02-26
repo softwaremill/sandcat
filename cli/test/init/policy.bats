@@ -3,7 +3,7 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../libexec/init/policy
-	source "$AGB_LIBEXECDIR/init/policy"
+	source "$SCT_LIBEXECDIR/init/policy"
 }
 
 teardown() {

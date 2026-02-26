@@ -3,7 +3,7 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../lib/composefile.bash
-	source "$AGB_LIBDIR/composefile.bash"
+	source "$SCT_LIBDIR/composefile.bash"
 
 	COMPOSE_FILE="$BATS_TEST_TMPDIR/docker-compose.yml"
 

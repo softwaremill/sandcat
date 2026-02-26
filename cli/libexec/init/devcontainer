@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # shellcheck source=../../lib/logging.bash
-source "$AGB_LIBDIR/logging.bash"
+source "$SCT_LIBDIR/logging.bash"
 # shellcheck source=../../lib/composefile.bash
-source "$AGB_LIBDIR/composefile.bash"
+source "$SCT_LIBDIR/composefile.bash"
 
 # Sets up a Devcontainer configuration for an agent.
 # Copies devcontainer template files and customizes the docker-compose.yml.
@@ -59,7 +59,7 @@ devcontainer() {
 
 	mkdir -p "$devcontainer_dir"
 	cp -r \
-		"$AGB_TEMPLATEDIR/$agent/devcontainer/"* \
+		"$SCT_TEMPLATEDIR/$agent/devcontainer/"* \
 		"$devcontainer_dir"
 
 	local rel_policy_file="../$policy_file"

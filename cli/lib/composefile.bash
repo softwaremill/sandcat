@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 
 # shellcheck source=require.bash
-source "$AGB_LIBDIR/require.bash"
+source "$SCT_LIBDIR/require.bash"
 # shellcheck source=path.bash
-source "$AGB_LIBDIR/path.bash"
+source "$SCT_LIBDIR/path.bash"
 # shellcheck source=constants.bash
-source "$AGB_LIBDIR/constants.bash"
+source "$SCT_LIBDIR/constants.bash"
 
 # Customizes a Docker Compose file with policy and optional user configurations.
 # Optional volumes are added as commented-out entries by default. Set environment
 # variables to "true" before calling this function to add them as active mounts:
-#   - AGENTBOX_PROXY_IMAGE: Docker image for proxy service (default: latest proxy image)
-#   - AGENTBOX_AGENT_IMAGE: Docker image for agent service (default: latest agent image)
-#   - AGENTBOX_MOUNT_CLAUDE_CONFIG: "true" to mount host Claude config (~/.claude)
-#   - AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS: "true" to enable shell customizations
-#   - AGENTBOX_ENABLE_DOTFILES: "true" to mount dotfiles
-#   - AGENTBOX_MOUNT_GIT_READONLY: "true" to mount .git directory as read-only
-#   - AGENTBOX_MOUNT_IDEA_READONLY: "true" to mount .idea directory as read-only
-#   - AGENTBOX_MOUNT_VSCODE_READONLY: "true" to mount .vscode directory as read-only
+#   - SANDCAT_PROXY_IMAGE: Docker image for proxy service (default: latest proxy image)
+#   - SANDCAT_AGENT_IMAGE: Docker image for agent service (default: latest agent image)
+#   - SANDCAT_MOUNT_CLAUDE_CONFIG: "true" to mount host Claude config (~/.claude)
+#   - SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS: "true" to enable shell customizations
+#   - SANDCAT_ENABLE_DOTFILES: "true" to mount dotfiles
+#   - SANDCAT_MOUNT_GIT_READONLY: "true" to mount .git directory as read-only
+#   - SANDCAT_MOUNT_IDEA_READONLY: "true" to mount .idea directory as read-only
+#   - SANDCAT_MOUNT_VSCODE_READONLY: "true" to mount .vscode directory as read-only
 # Args:
 #   $1 - Path to the policy file to mount, relative to the Docker Compose file directory
 #   $2 - Path to the Docker Compose file to modify
@@ -32,53 +32,36 @@ customize_compose_file() {
 
 	require yq
 
-	local default_proxy_image="ghcr.io/mattolson/agent-sandbox-proxy:latest"
-	local default_agent_image="ghcr.io/mattolson/agent-sandbox-$agent:latest"
+	local default_proxy_image="ghcr.io/VirtusLab/sandcat-proxy:latest"
+	local default_agent_image="ghcr.io/VirtusLab/sandcat-$agent:latest"
 
 	local compose_dir
 	compose_dir=$(dirname "$compose_file")
 
 	verify_relative_path "$compose_dir" "$policy_file"
 
-	if [[ $agent == "claude" ]]
-	then
-		: "${AGENTBOX_MOUNT_CLAUDE_CONFIG:=false}"
-	fi
-
-	: "${AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS:=false}"
-	: "${AGENTBOX_ENABLE_DOTFILES:=false}"
-	: "${AGENTBOX_MOUNT_GIT_READONLY:=false}"
-
 	if [[ $ide == "jetbrains" ]]
 	then
-		: "${AGENTBOX_MOUNT_IDEA_READONLY:=true}"
+		: "${SANDCAT_MOUNT_IDEA_READONLY:=true}"
 	fi
 
 	if [[ $ide == "vscode" ]]
 	then
-		: "${AGENTBOX_MOUNT_VSCODE_READONLY:=true}"
+		: "${SANDCAT_MOUNT_VSCODE_READONLY:=true}"
 	fi
-
-	local proxy_image_pinned
-	proxy_image_pinned=$(pull_and_pin_image "${AGENTBOX_PROXY_IMAGE:-$default_proxy_image}")
-	set_proxy_image "$compose_file" "$proxy_image_pinned"
-
-	local agent_image_pinned
-	agent_image_pinned=$(pull_and_pin_image "${AGENTBOX_AGENT_IMAGE:-$default_agent_image}")
-	set_agent_image "$compose_file" "$agent_image_pinned"
 
 	add_policy_volume "$compose_file" "$policy_file"
 
 	if [[ $agent == "claude" ]]
 	then
-		add_claude_config_volumes "$compose_file" "$AGENTBOX_MOUNT_CLAUDE_CONFIG"
+		add_claude_config_volumes "$compose_file" "${SANDCAT_MOUNT_CLAUDE_CONFIG:=false}"
 	fi
 
-	add_shell_customizations_volume "$compose_file" "$AGENTBOX_ENABLE_SHELL_CUSTOMIZATIONS"
-	add_dotfiles_volume "$compose_file" "$AGENTBOX_ENABLE_DOTFILES"
-	add_git_readonly_volume "$compose_file" "$AGENTBOX_MOUNT_GIT_READONLY"
-	add_idea_readonly_volume "$compose_file" "${AGENTBOX_MOUNT_IDEA_READONLY:-false}"
-	add_vscode_readonly_volume "$compose_file" "${AGENTBOX_MOUNT_VSCODE_READONLY:-false}"
+	add_shell_customizations_volume "$compose_file" "${SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS:=false}"
+	add_dotfiles_volume "$compose_file" "${SANDCAT_ENABLE_DOTFILES:=false}"
+	add_git_readonly_volume "$compose_file" "${SANDCAT_MOUNT_GIT_READONLY:=false}"
+	add_idea_readonly_volume "$compose_file" "${SANDCAT_MOUNT_IDEA_READONLY:-false}"
+	add_vscode_readonly_volume "$compose_file" "${SANDCAT_MOUNT_VSCODE_READONLY:-false}"
 
 	if [[ $ide == "jetbrains" ]]
 	then
@@ -232,7 +215,7 @@ add_shell_customizations_volume() {
 	local compose_file=$1
 	local active=${2:-true}
 
-	add_volume_entry "$compose_file" "$AGB_HOME_PATTERN/shell.d:/home/dev/.config/agent-sandbox/shell.d:ro" "$active" 'Shell customizations (optional - scripts sourced at shell startup)'
+	add_volume_entry "$compose_file" "$SCT_HOME_PATTERN/shell.d:/home/dev/.config/sandcat/shell.d:ro" "$active" 'Shell customizations (optional - scripts sourced at shell startup)'
 }
 
 # Adds dotfiles volume mount to the agent service.
@@ -244,7 +227,7 @@ add_dotfiles_volume() {
 	local active=${2:-true}
 
 	# shellcheck disable=SC2016
-	add_volume_entry "$compose_file" '${HOME}/.config/agent-sandbox/dotfiles:/home/dev/.dotfiles:ro' "$active" 'Dotfiles (optional - auto-linked into $HOME at startup)'
+	add_volume_entry "$compose_file" '${HOME}/.config/sandcat/dotfiles:/home/dev/.dotfiles:ro' "$active" 'Dotfiles (optional - auto-linked into $HOME at startup)'
 }
 
 # Adds .git directory mount as read-only to the agent service.

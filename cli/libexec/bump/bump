@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # shellcheck source=../../lib/require.bash
-source "$AGB_LIBDIR/require.bash"
+source "$SCT_LIBDIR/require.bash"
 # shellcheck source=../../lib/path.bash
-source "$AGB_LIBDIR/path.bash"
+source "$SCT_LIBDIR/path.bash"
 # shellcheck source=../../lib/composefile.bash
-source "$AGB_LIBDIR/composefile.bash"
+source "$SCT_LIBDIR/composefile.bash"
 # shellcheck source=../../lib/logging.bash
-source "$AGB_LIBDIR/logging.bash"
+source "$SCT_LIBDIR/logging.bash"
 
 # Bumps a single service's image to the latest digest
 # Args:

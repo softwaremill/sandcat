@@ -2,15 +2,15 @@
 set -euo pipefail
 
 # shellcheck source=../../lib/path.bash
-source "$AGB_LIBDIR/path.bash"
+source "$SCT_LIBDIR/path.bash"
 # shellcheck source=../../lib/select.bash
-source "$AGB_LIBDIR/select.bash"
+source "$SCT_LIBDIR/select.bash"
 # shellcheck source=../../lib/logging.bash
-source "$AGB_LIBDIR/logging.bash"
+source "$SCT_LIBDIR/logging.bash"
 
 # Opens the compose file in an editor. Warns if containers need restarting.
 edit() {
-	local no_restart="${AGENTBOX_NO_RESTART:-false}"
+	local no_restart="${SANDCAT_NO_RESTART:-false}"
 
 	while [[ $# -gt 0 ]]
 	do
@@ -40,7 +40,7 @@ edit() {
 	if [[ "$mtime_before" != "$mtime_after" ]]
 	then
 		local running
-		running=$("$AGB_LIBEXECDIR/compose/compose" ps --status running --quiet 2>/dev/null) || true
+		running=$("$SCT_LIBEXECDIR/compose/compose" ps --status running --quiet 2>/dev/null) || true
 
 		if [[ -n "$running" ]]
 		then
@@ -50,7 +50,7 @@ edit() {
 				echo "To pick up the changes and restart your containers, run: agentbox up -d" | warning
 			else
 				echo "Compose file was modified. Restarting containers..." | info
-				"$AGB_LIBEXECDIR/compose/compose" up -d
+				"$SCT_LIBEXECDIR/compose/compose" up -d
 			fi
 		else
 			echo "Compose file was modified." | info

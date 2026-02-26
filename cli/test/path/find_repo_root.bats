@@ -3,7 +3,7 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../lib/path.bash
-	source "$AGB_LIBDIR/path.bash"
+	source "$SCT_LIBDIR/path.bash"
 }
 
 teardown() {
@@ -30,10 +30,10 @@ teardown() {
 	assert_output "$test_root"
 }
 
-@test "finds root with \$AGB_PROJECT_DIR directory" {
+@test "finds root with \$SCT_PROJECT_DIR directory" {
 	local test_root="$BATS_TEST_TMPDIR/repo"
 
-	mkdir -p "$test_root/$AGB_PROJECT_DIR"
+	mkdir -p "$test_root/$SCT_PROJECT_DIR"
 	mkdir -p "$test_root/nested/deep"
 
 	run find_repo_root "$test_root/nested/deep"
@@ -41,10 +41,10 @@ teardown() {
 	assert_output "$test_root"
 }
 
-@test "prefers \$AGB_PROJECT_DIR over .git" {
+@test "prefers \$SCT_PROJECT_DIR over .git" {
 	local test_root="$BATS_TEST_TMPDIR/repo"
 
-	mkdir -p "$test_root/$AGB_PROJECT_DIR"
+	mkdir -p "$test_root/$SCT_PROJECT_DIR"
 	mkdir -p "$test_root/.git"
 	mkdir -p "$test_root/nested"
 

@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # shellcheck source=../../lib/require.bash
-source "$AGB_LIBDIR/require.bash"
+source "$SCT_LIBDIR/require.bash"
 # shellcheck source=../../lib/path.bash
-source "$AGB_LIBDIR/path.bash"
+source "$SCT_LIBDIR/path.bash"
 
 # Helper that automatically locates the docker compose file
 # All arguments are passed to docker compose

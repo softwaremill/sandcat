@@ -4,7 +4,7 @@
 setup() {
 	load test_helper
 	# shellcheck source=../../libexec/init/init
-	source "$AGB_LIBEXECDIR/init/init"
+	source "$SCT_LIBEXECDIR/init/init"
 
 	PROJECT_DIR="$BATS_TEST_TMPDIR/project"
 	mkdir -p "$PROJECT_DIR"
@@ -33,16 +33,16 @@ teardown() {
 }
 
 @test "init accepts valid --agent and --mode values" {
-	stub policy "$PROJECT_DIR/.agent-sandbox/policy-cli-claude.yaml claude : :"
-	stub cli "--policy-file .agent-sandbox/policy-cli-claude.yaml --project-path $PROJECT_DIR --agent claude --name test : :"
+	stub policy "$PROJECT_DIR/.sandcat/policy-cli-claude.yaml claude : :"
+	stub cli "--policy-file .sandcat/policy-cli-claude.yaml --project-path $PROJECT_DIR --agent claude --name test : :"
 
 	run init --agent claude --mode cli --name test --path "$PROJECT_DIR"
 	assert_success
 }
 
 @test "init accepts valid --ide value for devcontainer mode" {
-	stub policy "$PROJECT_DIR/.agent-sandbox/policy-devcontainer-copilot.yaml copilot jetbrains : :"
-	stub devcontainer "--policy-file .agent-sandbox/policy-devcontainer-copilot.yaml --project-path $PROJECT_DIR --agent copilot --ide jetbrains --name test : :"
+	stub policy "$PROJECT_DIR/.sandcat/policy-devcontainer-copilot.yaml copilot jetbrains : :"
+	stub devcontainer "--policy-file .sandcat/policy-devcontainer-copilot.yaml --project-path $PROJECT_DIR --agent copilot --ide jetbrains --name test : :"
 
 	run init --agent copilot --mode devcontainer --ide jetbrains --name test --path "$PROJECT_DIR"
 	assert_success
@@ -57,7 +57,7 @@ teardown() {
 		"'Select agent:' claude copilot codex : echo claude" \
 		"'Select mode:' cli devcontainer : echo cli"
 
-	local policy_file=".agent-sandbox/policy-cli-claude.yaml"
+	local policy_file=".sandcat/policy-cli-claude.yaml"
 	stub policy "$PROJECT_DIR/$policy_file claude : :"
 	stub cli "--policy-file $policy_file --project-path $PROJECT_DIR --agent claude --name my-interactive-project : :"
 
@@ -78,7 +78,7 @@ teardown() {
 
 	local expected_name
 	expected_name=$(basename "$PROJECT_DIR")-sandbox-devcontainer
-	local policy_file=".agent-sandbox/policy-devcontainer-copilot.yaml"
+	local policy_file=".sandcat/policy-devcontainer-copilot.yaml"
 
 	stub policy "$PROJECT_DIR/$policy_file copilot vscode : :"
 	stub devcontainer "--policy-file $policy_file --project-path $PROJECT_DIR --agent copilot --ide vscode --name $expected_name : :"

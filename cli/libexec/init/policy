@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # shellcheck source=../../lib/logging.bash
-source "$AGB_LIBDIR/logging.bash"
+source "$SCT_LIBDIR/logging.bash"
 # shellcheck source=../../lib/require.bash
-source "$AGB_LIBDIR/require.bash"
+source "$SCT_LIBDIR/require.bash"
 
 # Creates a network policy file for the proxy.
 # Args:
@@ -22,7 +22,7 @@ policy() {
 
 	mkdir -p "$(dirname -- "$policy_file")"
 	cp \
-		"$AGB_TEMPLATEDIR/policy.yaml" \
+		"$SCT_TEMPLATEDIR/policy.yaml" \
 		"$policy_file"
 
 	services="$services" yq -i '.services = (strenv(services) | split("\n") )' "$policy_file"

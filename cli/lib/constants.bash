@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Core constants for agent-sandbox
+# Core constants for sandcat
 
 # shellcheck disable=SC2016
-export AGB_HOME_PATTERN='${HOME}/.config/agent-sandbox'
-export AGB_PROJECT_DIR='.agent-sandbox'
+export SCT_HOME_PATTERN='${HOME}/.config/sandcat'
+export SCT_PROJECT_DIR='.sandcat'

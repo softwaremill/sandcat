@@ -4,7 +4,7 @@ setup() {
 	load test_helper
 
 	# shellcheck source=../../libexec/edit/compose
-	source "$AGB_LIBEXECDIR/edit/compose"
+	source "$SCT_LIBEXECDIR/edit/compose"
 
 	mkdir -p "$BATS_TEST_TMPDIR/.devcontainer"
 	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/docker-compose.yml"
@@ -82,7 +82,7 @@ teardown() {
 	assert_output --partial "agentbox up -d"
 }
 
-@test "edit respects AGENTBOX_NO_RESTART env var when modified and containers running" {
+@test "edit respects SANDCAT_NO_RESTART env var when modified and containers running" {
 	unset -f open_editor
 	stub open_editor \
 		"$COMPOSE_FILE : sleep 1 && touch '$COMPOSE_FILE'"
@@ -90,11 +90,11 @@ teardown() {
 	stub docker \
 		"compose -f $COMPOSE_FILE ps --status running --quiet : echo running"
 
-	export AGENTBOX_NO_RESTART=true
+	export SANDCAT_NO_RESTART=true
 	cd "$BATS_TEST_TMPDIR"
 	run edit
 	assert_success
 	assert_output --partial "Compose file was modified, and you have containers running."
 	assert_output --partial "agentbox up -d"
-	unset AGENTBOX_NO_RESTART
+	unset SANDCAT_NO_RESTART
 }

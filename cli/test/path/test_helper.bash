@@ -9,12 +9,12 @@ fi
 set -uo pipefail
 export SHELLOPTS
 
-AGB_ROOT="$BATS_TEST_DIRNAME/../.."
-BATS_LIB_PATH="$AGB_ROOT/support":${BATS_LIB_PATH-}
+SCT_ROOT="$BATS_TEST_DIRNAME/../.."
+BATS_LIB_PATH="$SCT_ROOT/support":${BATS_LIB_PATH-}
 
 bats_load_library bats-ext
 bats_load_library bats-support
 bats_load_library bats-assert
 bats_load_library bats-mock-ext
 
-export AGB_ROOT AGB_LIBDIR="$AGB_ROOT/lib"
+export SCT_ROOT SCT_LIBDIR="$SCT_ROOT/lib"
