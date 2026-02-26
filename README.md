@@ -228,6 +228,31 @@ GitHub, which can be used to read untrusted content (prompt injection) or push
 data out (exfiltration). Malicious code might also be generated as part of the
 project itself.
 
+## Applying configuration changes
+
+Mitmproxy reads settings files only at startup (no hot-reload), and the app
+container sources `sandcat.env` only during its entrypoint. After editing any
+settings file, you need to restart services for changes to take effect.
+
+**From a host terminal** (not the VS Code terminal inside the container, which
+will die mid-restart):
+
+```sh
+# 1. Restart mitmproxy (re-reads settings, regenerates sandcat.env),
+#    then wg-client (needs mitmproxy healthy before starting)
+docker compose -f compose-all.yml restart mitmproxy && \
+docker compose -f compose-all.yml restart wg-client
+
+# 2. Restart the app container — use "Rebuild Container" from VS Code's
+#    command palette so it reconnects cleanly, or from the host terminal:
+docker compose -f compose-all.yml restart app
+```
+
+`docker compose restart` does not enforce `depends_on` healthcheck ordering, so
+mitmproxy and wg-client are restarted sequentially with `&&` to ensure mitmproxy
+is ready before wg-client comes up. VS Code's **Rebuild Container** only
+rebuilds the `app` service — it does not restart `mitmproxy` or `wg-client`.
+
 ## Network access rules
 
 The `network` array defines ordered access rules evaluated top-to-bottom. First
