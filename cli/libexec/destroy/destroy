@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# shellcheck source=../../lib/logging.bash
+source "$AGB_LIBDIR/logging.bash"
+# shellcheck source=../../lib/constants.bash
+source "$AGB_LIBDIR/constants.bash"
+# shellcheck source=../../lib/path.bash
+source "$AGB_LIBDIR/path.bash"
+# shellcheck source=../../lib/select.bash
+source "$AGB_LIBDIR/select.bash"
+
+destroy() {
+	local repo_root
+	repo_root="$(find_repo_root)"
+
+	case "${1:-}" in
+	-f | --force)
+		;;
+	"")
+		echo "This will stop containers, remove volumes, and delete .devcontainer and $AGB_PROJECT_DIR directories." |
+			warning
+		if [[ "$(select_yes_no "Continue?")" == "false" ]]
+		then
+			echo "Aborting" | warning
+			return 0
+		fi
+		;;
+	*)
+		echo "$0: unknown parameter: $1" >&2
+		return 1
+		;;
+	esac
+
+	echo "Stopping containers" | warning
+	"$AGB_LIBEXECDIR/compose/compose" down --volumes
+
+	local project_dir="$repo_root/$AGB_PROJECT_DIR"
+	if [[ -d "$project_dir" ]]
+	then
+		echo "Removing $project_dir" | warning
+		rm -rf "$project_dir"
+	fi
+
+	local devcontainer_dir="$repo_root/.devcontainer"
+	if [[ -d "$devcontainer_dir" ]]
+	then
+		echo "Removing $devcontainer_dir" | warning
+		rm -rf "$devcontainer_dir"
+	fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]
+then
+	destroy "$@"
+fi

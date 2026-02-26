@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Execute a command in the agent container.
+# Ensures containers are running before executing the command.
+exec_function() { # don't redefine `exec`
+	"$AGB_LIBEXECDIR/compose/compose" up -d
+
+	exec "$AGB_LIBEXECDIR/compose/compose" exec agent "${1-zsh}" "${@:2}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]
+then
+	exec_function "$@"
+fi
