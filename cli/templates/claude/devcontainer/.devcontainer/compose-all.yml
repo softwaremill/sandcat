@@ -1,7 +1,7 @@
 name: sandcat
 
 include:
-  - path: compose-proxy.yml
+  - path: sandcat/compose-proxy.yml
 
 services:
   app:

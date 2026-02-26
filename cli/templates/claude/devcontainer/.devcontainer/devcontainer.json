@@ -1,6 +1,6 @@
 {
 	"name": "Sandcat",
-	"dockerComposeFile": "../compose-all.yml",
+	"dockerComposeFile": "compose-all.yml",
 	"service": "app",
 	"workspaceFolder": "/workspaces/sandcat",
 	// Remove credential sockets that VS Code forwards into the container
