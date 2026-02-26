@@ -198,9 +198,11 @@ add_claude_config_volumes() {
 	local active=${2:-true}
 
 	# shellcheck disable=SC2016
-	add_volume_entry "$compose_file" '${HOME}/.claude/CLAUDE.md:/home/dev/.claude/CLAUDE.md:ro' "$active" 'Host Claude config (optional)'
+	add_volume_entry "$compose_file" '${HOME}/.claude/CLAUDE.md:/home/vscode/.claude/CLAUDE.md:ro' "$active" 'Host Claude config (optional)'
 	# shellcheck disable=SC2016
-	add_volume_entry "$compose_file" '${HOME}/.claude/settings.json:/home/dev/.claude/settings.json:ro' "$active"
+	add_volume_entry "$compose_file" '${HOME}/.claude/agents:/home/vscode/.claude/agents:ro' "$active"
+	# shellcheck disable=SC2016
+	add_volume_entry "$compose_file" '${HOME}/.claude/commands:/home/vscode/.claude/commands:ro' "$active"
 }
 
 # Adds shell customizations volume mount to the agent service.
