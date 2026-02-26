@@ -1,10 +1,8 @@
-name: sandcat
-
 include:
   - path: sandcat/compose-proxy.yml
 
 services:
-  app:
+  agent:
     build:
       context: .
       dockerfile: Dockerfile.app
@@ -33,6 +31,10 @@ services:
       - ~/.claude/agents:/home/vscode/.claude/agents:ro
       - ~/.claude/commands:/home/vscode/.claude/commands:ro
     command: sleep infinity
+    stdin_open: true
+    tty: true
+    environment:
+      - CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
     depends_on:
       wg-client:
         condition: service_healthy

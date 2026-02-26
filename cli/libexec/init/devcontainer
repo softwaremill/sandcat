@@ -55,7 +55,7 @@ devcontainer() {
 	: "${agent?Missing required parameter: --agent}"
 
 	local devcontainer_dir="$project_path/.devcontainer"
-	local compose_file="$devcontainer_dir/docker-compose.yml"
+	local compose_file="$devcontainer_dir/compose-all.yml"
 
 	mkdir -p "$devcontainer_dir"
 	cp -r \

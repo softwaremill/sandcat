@@ -66,7 +66,7 @@ find_compose_file() {
 	repo_root="$(find_repo_root)"
 
 	local project_compose="$repo_root/$SCT_PROJECT_DIR/docker-compose.yml"
-	local devcontainer_compose="$repo_root/.devcontainer/docker-compose.yml"
+	local devcontainer_compose="$repo_root/.devcontainer/compose-all.yml"
 
 	if [[ -f "$project_compose" ]]
 	then

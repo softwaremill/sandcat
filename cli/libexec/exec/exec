@@ -6,7 +6,8 @@ set -euo pipefail
 exec_function() { # don't redefine `exec`
 	"$SCT_LIBEXECDIR/compose/compose" up -d
 
-	exec "$SCT_LIBEXECDIR/compose/compose" exec agent "${1-zsh}" "${@:2}"
+	# FIXME run vs exec
+	exec "$SCT_LIBEXECDIR/compose/compose" run agent "${1-zsh}" "${@:2}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]

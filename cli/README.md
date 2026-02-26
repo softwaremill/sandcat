@@ -121,8 +121,6 @@ cli/
 
 These override defaults during compose file generation. Optional volumes default to `false` (commented out).
 
-- `SANDCAT_PROXY_IMAGE` - Docker image for proxy service (default: latest published proxy image)
-- `SANDCAT_AGENT_IMAGE` - Docker image for agent service (default: latest published agent image)
 - `SANDCAT_MOUNT_CLAUDE_CONFIG` - `true` to mount host `~/.claude` config (Claude agent only)
 - `SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS` - `true` to mount `~/.config/sandcat/shell.d`
 - `SANDCAT_ENABLE_DOTFILES` - `true` to mount `~/.config/sandcat/dotfiles`

@@ -15,6 +15,9 @@ source "$SCT_LIBDIR/composefile.bash"
 #   --project-path - Path to the project directory
 #   --agent - The agent name (e.g., "claude")
 cli() {
+	echo "FIXME: cli mode not supported" | error
+	exit 1
+
 	local policy_file=""
 	local project_path=""
 	local agent=""

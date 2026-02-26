@@ -78,7 +78,7 @@ init() {
 		name=$(read_line "Project name [empty for default]:")
 	fi
 
-	local available_agents=(claude copilot codex)
+	local available_agents=(claude)
 	if [[ -z "$agent" ]]
 	then
 		agent=$(select_option "Select agent:" "${available_agents[@]}")
@@ -88,7 +88,7 @@ init() {
 		return 1
 	fi
 
-	local available_modes=(cli devcontainer)
+	local available_modes=(devcontainer cli)
 	if [[ -z "$mode" ]]
 	then
 		mode=$(select_option "Select mode:" "${available_modes[@]}")
@@ -103,7 +103,7 @@ init() {
 		name="$(derive_project_name "$project_path" "$mode")"
 	fi
 
-	local policy_file="$SCT_PROJECT_DIR/policy-$mode-$agent.yaml"
+	local policy_file="$SCT_PROJECT_DIR/settings.json"
 
 	case "$mode" in
 	cli)

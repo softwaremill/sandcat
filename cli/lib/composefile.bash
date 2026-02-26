@@ -10,8 +10,6 @@ source "$SCT_LIBDIR/constants.bash"
 # Customizes a Docker Compose file with policy and optional user configurations.
 # Optional volumes are added as commented-out entries by default. Set environment
 # variables to "true" before calling this function to add them as active mounts:
-#   - SANDCAT_PROXY_IMAGE: Docker image for proxy service (default: latest proxy image)
-#   - SANDCAT_AGENT_IMAGE: Docker image for agent service (default: latest agent image)
 #   - SANDCAT_MOUNT_CLAUDE_CONFIG: "true" to mount host Claude config (~/.claude)
 #   - SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS: "true" to enable shell customizations
 #   - SANDCAT_ENABLE_DOTFILES: "true" to mount dotfiles
@@ -31,9 +29,6 @@ customize_compose_file() {
 	local ide=${4:-none}
 
 	require yq
-
-	local default_proxy_image="ghcr.io/VirtusLab/sandcat-proxy:latest"
-	local default_agent_image="ghcr.io/VirtusLab/sandcat-$agent:latest"
 
 	local compose_dir
 	compose_dir=$(dirname "$compose_file")
@@ -84,7 +79,7 @@ set_proxy_image() {
 	local compose_file=$1
 	local image=$2
 
-	image="$image" yq -i '.services.proxy.image = env(image)' "$compose_file"
+	image="$image" yq -i '.services.mitmproxy.image = env(image)' "$compose_file"
 }
 
 # Sets the agent service image in a Docker Compose file.
@@ -120,8 +115,9 @@ add_policy_volume() {
 	local compose_file=$1
 	local policy_file=$2
 
+	# FIXME add .local file
 	policy_file="$policy_file" yq -i \
-		'.services.proxy.volumes += [env(policy_file) + ":/etc/mitmproxy/policy.yaml:ro"]' "$compose_file"
+		'.services.mitmproxy.volumes += [env(policy_file) + ":/config/project/settings.json:ro"]' "$compose_file"
 }
 
 # Adds a foot comment to the last item in a YAML array.
