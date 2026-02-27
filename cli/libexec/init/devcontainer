@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# shellcheck source=../../lib/logging.bash
+source "$SCT_LIBDIR/logging.bash"
+# shellcheck source=../../lib/composefile.bash
+source "$SCT_LIBDIR/composefile.bash"
+
+# Sets up a Devcontainer configuration for an agent.
+# Copies devcontainer template files and customizes the docker-compose.yml.
+# Args:
+#   --policy-file - Path to the policy file (relative to project directory)
+#   --project-path - Path to the project directory
+#   --agent - The agent name (e.g., "claude")
+#   --ide - The IDE name (e.g., "vscode", "jetbrains", "none") (optional)
+devcontainer() {
+	local policy_file=""
+	local project_path=""
+	local agent=""
+	local ide=""
+	local name=""
+
+	while [[ $# -gt 0 ]]
+	do
+		case $1 in
+		--policy-file)
+			policy_file="$2"
+			shift 2
+			;;
+		--project-path)
+			project_path="$2"
+			shift 2
+			;;
+		--agent)
+			agent="$2"
+			shift 2
+			;;
+		--ide)
+			ide="$2"
+			shift 2
+			;;
+		--name)
+			name="$2"
+			shift 2
+			;;
+		*)
+			echo "Unknown option: $1" | error
+			return 1
+			;;
+		esac
+	done
+
+	: "${policy_file?Missing required parameter: --policy-file}"
+	: "${project_path?Missing required parameter: --project-path}"
+	: "${agent?Missing required parameter: --agent}"
+
+	local devcontainer_dir="$project_path/.devcontainer"
+	local compose_file="$devcontainer_dir/compose-all.yml"
+
+	mkdir -p "$devcontainer_dir"
+	cp -r \
+		"$SCT_TEMPLATEDIR/$agent/devcontainer/"* \
+		"$devcontainer_dir"
+
+	local rel_policy_file="../$policy_file"
+
+	customize_compose_file "$rel_policy_file" "$compose_file" "$agent" "$ide"
+
+	local project_name
+	project_name="${name:-$(derive_project_name "$project_path" "devcontainer")}"
+	set_project_name "$compose_file" "$project_name"
+
+	echo "Devcontainer dir created at $devcontainer_dir" | info
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]
+then
+	devcontainer "$@"
+fi

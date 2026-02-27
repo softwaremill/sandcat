@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# shellcheck source=../../lib/compat.bash
+source "$SCT_LIBDIR/compat.bash"
+# shellcheck source=../../lib/logging.bash
+source "$SCT_LIBDIR/logging.bash"
+# shellcheck source=../../lib/constants.bash
+source "$SCT_LIBDIR/constants.bash"
+# shellcheck source=../../lib/select.bash
+source "$SCT_LIBDIR/select.bash"
+# shellcheck source=../../lib/path.bash
+source "$SCT_LIBDIR/path.bash"
+
+# Opens the network policy file in the default editor. If the file is modified,
+# automatically restarts the proxy service (only if docker compose is running).
+#
+# Arguments:
+#   --mode - mode filter (default: *)
+#   --agent - agent filter (default: *)
+#
+# Policy file pattern: $SCT_PROJECT_DIR/policy-$mode-$agent.yaml
+policy() {
+	local repo_root
+	repo_root="$(find_repo_root)"
+
+	local mode="*"
+	local agent="*"
+
+	while [[ $# -gt 0 ]]
+	do
+		case "$1" in
+		--mode)
+			mode="$2"
+			shift 2
+			;;
+		--agent)
+			agent="$2"
+			shift 2
+			;;
+		*)
+			echo "Unknown argument: $1" | error
+			return 1
+			;;
+		esac
+	done
+
+	local file_pattern="$repo_root/$SCT_PROJECT_DIR/settings.json"
+	local policy_files=()
+	mapfile -t policy_files < <(compgen -G "$file_pattern" 2>/dev/null | sort)
+	if [[ ${#policy_files[@]} -eq 0 ]]
+	then
+		echo "No policy file found matching pattern: $file_pattern" | error
+		return 1
+	fi
+
+	if [[ ${#policy_files[@]} -gt 1 ]]
+	then
+		echo "Multiple policy files found matching pattern:" | warning
+		printf '  %s\n' "${policy_files[@]}" | warning
+		echo "Using: ${policy_files[0]}" | warning
+	fi
+
+	local mtime_before
+	mtime_before=$(get_file_mtime "${policy_files[0]}")
+
+	open_editor "${policy_files[0]}"
+
+	local mtime_after
+	mtime_after=$(get_file_mtime "${policy_files[0]}")
+
+	if [[ "$mtime_after" != "$mtime_before" ]]
+	then
+		local proxy_status
+		proxy_status=$("$SCT_LIBEXECDIR/compose/compose" ps mitmproxy --status running --quiet 2>/dev/null) || true
+		if [[ -n "$proxy_status" ]]
+		then
+			# FIXME: do we need to restart agent too?
+			echo "Policy file was modified. Restarting proxy service..." | info
+			"$SCT_LIBEXECDIR/compose/compose" restart mitmproxy
+			"$SCT_LIBEXECDIR/compose/compose" restart wg-client
+		else
+			echo "Policy file was modified, but proxy service is not running. Skipping restart." | warning
+		fi
+	else
+		echo "Policy file unchanged. Skipping restart." | warning
+	fi
+
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]
+then
+	policy "$@"
+fi

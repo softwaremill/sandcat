@@ -6,8 +6,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gh gosu jq vim \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --chmod=755 scripts/app-init.sh /usr/local/bin/app-init.sh
-COPY --chmod=755 scripts/app-user-init.sh /usr/local/bin/app-user-init.sh
+COPY --chmod=755 sandcat/scripts/app-init.sh /usr/local/bin/app-init.sh
+COPY --chmod=755 sandcat/scripts/app-user-init.sh /usr/local/bin/app-user-init.sh
 
 USER vscode
 

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run a command in the agent container.
+# Ensures containers are running before executing the command.
+run() {
+	"$SCT_LIBEXECDIR/compose/compose" up -d
+
+	# FIXME run vs exec
+	exec "$SCT_LIBEXECDIR/compose/compose" run agent "${1-bash}" "${@:2}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]
+then
+	run "$@"
+fi
