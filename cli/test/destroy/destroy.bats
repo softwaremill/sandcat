@@ -44,7 +44,7 @@ teardown() {
 
 @test "destroy works when only devcontainer exists" {
 	local test_root="$BATS_TEST_TMPDIR/repo"
-	local compose_file="$test_root/.devcontainer/docker-compose.yml"
+	local compose_file="$test_root/.devcontainer/compose-all.yml"
 	mkdir -p "$test_root/.devcontainer"
 	touch "$compose_file"
 

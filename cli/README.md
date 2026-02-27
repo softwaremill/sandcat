@@ -81,10 +81,10 @@ Options:
 Opens the network policy file in your editor. If you save changes, the proxy service will automatically restart to apply
 the new policy. Use `--mode` and `--agent` to select specific policy files.
 
-### `agentbox exec`
+### `agentbox run`
 
-Runs a command inside the agent container. If no command is specified, opens a shell. Example: `agentbox exec` opens a
-shell, `agentbox exec npm install` runs npm inside the container.
+Runs a command inside the agent container. If no command is specified, opens a shell. Example: `agentbox run` opens a
+shell, `agentbox run npm install` runs npm inside the container.
 
 ## Directory Structure
 

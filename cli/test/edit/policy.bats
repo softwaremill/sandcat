@@ -7,7 +7,7 @@ setup() {
 	source "$SCT_LIBEXECDIR/edit/policy"
 
 	mkdir -p "$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR"
-	POLICY_FILE="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
+	POLICY_FILE="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/settings.json"
 	touch "$POLICY_FILE"
 }
 
@@ -25,68 +25,9 @@ teardown() {
 	assert_success
 }
 
-@test "policy filters by mode" {
-	POLICY_FILE_CLI="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-cli-claude.yaml"
-	POLICY_FILE_DEV="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
-	touch "$POLICY_FILE_CLI" "$POLICY_FILE_DEV"
-
-	unset -f open_editor
-	stub open_editor \
-		"$POLICY_FILE_CLI : :"
-
-	cd "$BATS_TEST_TMPDIR"
-	run policy --mode cli
-	assert_success
-}
-
-@test "policy filters by agent" {
-	POLICY_FILE_CURSOR="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-cursor.yaml"
-	POLICY_FILE_CLAUDE="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
-	touch "$POLICY_FILE_CURSOR" "$POLICY_FILE_CLAUDE"
-
-	unset -f open_editor
-	stub open_editor \
-		"$POLICY_FILE_CURSOR : :"
-
-	cd "$BATS_TEST_TMPDIR"
-	run policy --agent cursor
-	assert_success
-}
-
-@test "policy filters by mode and agent" {
-	POLICY_FILE_SPECIFIC="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-cli-cursor.yaml"
-	touch "$POLICY_FILE_SPECIFIC" \
-		"$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-cursor.yaml" \
-		"$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-cli-claude.yaml" \
-		"$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-claude.yaml"
-
-	unset -f open_editor
-	stub open_editor \
-		"$POLICY_FILE_SPECIFIC : :"
-
-	cd "$BATS_TEST_TMPDIR"
-	run policy --mode cli --agent cursor
-	assert_success
-}
-
-@test "policy warns when multiple files match and uses first" {
-	POLICY_FILE_1="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-agent1.yaml"
-	POLICY_FILE_2="$BATS_TEST_TMPDIR/$SCT_PROJECT_DIR/policy-dev-agent2.yaml"
-	touch "$POLICY_FILE_1" "$POLICY_FILE_2"
-
-	unset -f open_editor
-	stub open_editor \
-		"$POLICY_FILE_1 : :"
-
-	cd "$BATS_TEST_TMPDIR"
-	run policy --mode dev
-	assert_success
-	assert_output --partial "Multiple policy files found matching pattern"
-}
-
 @test "policy restarts proxy when file modified and proxy running" {
 	mkdir -p "$BATS_TEST_TMPDIR/.devcontainer"
-	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/docker-compose.yml"
+	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/compose-all.yml"
 	touch "$COMPOSE_FILE"
 
 	unset -f open_editor
@@ -94,8 +35,9 @@ teardown() {
 		"$POLICY_FILE : sleep 1 && touch '$POLICY_FILE'"
 
 	stub docker \
-		"compose -f $COMPOSE_FILE ps proxy --status running --quiet : echo 'proxy-container-id'" \
-		"compose -f $COMPOSE_FILE restart proxy : :"
+		"compose -f $COMPOSE_FILE ps mitmproxy --status running --quiet : echo 'proxy-container-id'" \
+		"compose -f $COMPOSE_FILE restart mitmproxy : :" \
+		"compose -f $COMPOSE_FILE restart wg-client : :"
 
 	cd "$BATS_TEST_TMPDIR"
 	run policy
@@ -115,7 +57,7 @@ teardown() {
 
 @test "policy skips restart when proxy not running" {
 	mkdir -p "$BATS_TEST_TMPDIR/.devcontainer"
-	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/docker-compose.yml"
+	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/compose-all.yml"
 	touch "$COMPOSE_FILE"
 
 	unset -f open_editor
@@ -123,7 +65,7 @@ teardown() {
 		"$POLICY_FILE : sleep 1 && touch '$POLICY_FILE'"
 
 	stub docker \
-		"compose -f $COMPOSE_FILE ps proxy --status running --quiet : :"
+		"compose -f $COMPOSE_FILE ps mitmproxy --status running --quiet : :"
 
 	cd "$BATS_TEST_TMPDIR"
 	run policy

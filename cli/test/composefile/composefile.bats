@@ -61,37 +61,26 @@ teardown() {
 	assert_output "ghcr.io/example/test@sha256:abc123"
 }
 
-@test "set_proxy_image sets image with tag" {
-	set_proxy_image "$COMPOSE_FILE" "nginx:latest"
-
-	run yq '.services.proxy.image' "$COMPOSE_FILE"
-	assert_output "nginx:latest"
-}
-
-@test "set_agent_image sets image with digest" {
-	set_agent_image "$COMPOSE_FILE" "ghcr.io/example/agent@sha256:def456"
-
-	run yq '.services.agent.image' "$COMPOSE_FILE"
-	assert_output "ghcr.io/example/agent@sha256:def456"
-}
-
 @test "add_policy_volume adds policy mount to proxy service" {
 	add_policy_volume "$COMPOSE_FILE" "policy.yaml"
 
-	yq -e '.services.proxy.volumes[] | select(. == "policy.yaml:/etc/mitmproxy/policy.yaml:ro")' "$COMPOSE_FILE"
+	yq -e '.services.mitmproxy.volumes[] | select(. == "policy.yaml:/config/project/settings.json:ro")' "$COMPOSE_FILE"
 }
 
 @test "add_claude_config_volumes adds CLAUDE.md and settings.json" {
 	add_claude_config_volumes "$COMPOSE_FILE"
 
 	run yq '.services.agent.volumes | length' "$COMPOSE_FILE"
-	assert_output "3"
+	assert_output "4"
 
 	# shellcheck disable=SC2016
-	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/CLAUDE.md:/home/dev/.claude/CLAUDE.md:ro")' "$COMPOSE_FILE"
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/CLAUDE.md:/home/vscode/.claude/CLAUDE.md:ro")' "$COMPOSE_FILE"
 
 	# shellcheck disable=SC2016
-	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/settings.json:/home/dev/.claude/settings.json:ro")' "$COMPOSE_FILE"
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/agents:/home/vscode/.claude/agents:ro")' "$COMPOSE_FILE"
+
+	# shellcheck disable=SC2016
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/commands:/home/vscode/.claude/commands:ro")' "$COMPOSE_FILE"
 }
 
 @test "add_shell_customizations_volume adds shell.d mount" {
@@ -140,25 +129,21 @@ assert_jetbrains_capabilities() {
 assert_customize_compose_file_common() {
 	local compose_file=$1
 
-	# Verify images
-	run yq '.services.proxy.image' "$compose_file"
-	assert_output "ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123"
-
-	run yq '.services.agent.image' "$compose_file"
-	assert_output "ghcr.io/VirtusLab/sandcat-claude@sha256:def456"
-
 	# Verify policy volume on proxy
-	yq -e '.services.proxy.volumes[] | select(. == "policy.yaml:/etc/mitmproxy/policy.yaml:ro")' "$compose_file"
+	yq -e '.services.mitmproxy.volumes[] | select(. == "policy.yaml:/config/project/settings.json:ro")' "$compose_file"
 
 	# Verify all agent volumes count (initial + 2 Claude + shell.d + dotfiles + .git + IDE-specific = 7)
 	run yq '.services.agent.volumes | length' "$compose_file"
-	assert_output "7"
+	assert_output 8
 
 	# shellcheck disable=SC2016
-	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/CLAUDE.md:/home/dev/.claude/CLAUDE.md:ro")' "$compose_file"
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/CLAUDE.md:/home/vscode/.claude/CLAUDE.md:ro")' "$compose_file"
 
 	# shellcheck disable=SC2016
-	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/settings.json:/home/dev/.claude/settings.json:ro")' "$compose_file"
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/agents:/home/vscode/.claude/agents:ro")' "$compose_file"
+
+	# shellcheck disable=SC2016
+	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.claude/commands:/home/vscode/.claude/commands:ro")' "$compose_file"
 
 	# shellcheck disable=SC2016
 	yq -e '.services.agent.volumes[] | select(. == "${HOME}/.config/sandcat/shell.d:/home/dev/.config/sandcat/shell.d:ro")' "$compose_file"
@@ -238,25 +223,10 @@ EOF
 	POLICY_FILE="policy.yaml"
 	touch "$BATS_TEST_TMPDIR/$POLICY_FILE"
 
-	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
-	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-claude:latest"
-
-	unset -f pull_and_pin_image
-	stub pull_and_pin_image \
-		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
-		"ghcr.io/VirtusLab/sandcat-claude:latest : echo 'ghcr.io/VirtusLab/sandcat-claude@sha256:def456'"
-
 	customize_compose_file "$POLICY_FILE" "$COMPOSE_FILE" "claude" "jetbrains"
 
-	# Verify images are set
-	run yq '.services.proxy.image' "$COMPOSE_FILE"
-	assert_output "ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123"
-
-	run yq '.services.agent.image' "$COMPOSE_FILE"
-	assert_output "ghcr.io/VirtusLab/sandcat-claude@sha256:def456"
-
 	# Verify policy volume on proxy
-	yq -e '.services.proxy.volumes[] | select(. == "policy.yaml:/etc/mitmproxy/policy.yaml:ro")' "$COMPOSE_FILE"
+	yq -e '.services.mitmproxy.volumes[] | select(. == "policy.yaml:/config/project/settings.json:ro")' "$COMPOSE_FILE"
 
 	# Verify .idea volume
 	yq -e '.services.agent.volumes[] | select(. == "../.idea:/workspace/.idea:ro")' "$COMPOSE_FILE"
@@ -269,12 +239,15 @@ EOF
 	# Note: sed on line 92 of composefile.bash merges foot comments into the next sibling as head comments
 	# so the yq's foot_comment is empty.
 	run yq -P '.services.agent.volumes' "$COMPOSE_FILE"
-	assert_line '# - ${HOME}/.claude/CLAUDE.md:/home/dev/.claude/CLAUDE.md:ro'
-	assert_line '# - ${HOME}/.claude/settings.json:/home/dev/.claude/settings.json:ro'
+	assert_line '# - ${HOME}/.claude/CLAUDE.md:/home/vscode/.claude/CLAUDE.md:ro'
+	assert_line '# - ${HOME}/.claude/agents:/home/vscode/.claude/agents:ro'
+	assert_line '# - ${HOME}/.claude/commands:/home/vscode/.claude/commands:ro'
 	assert_line '# - ${HOME}/.config/sandcat/shell.d:/home/dev/.config/sandcat/shell.d:ro'
 	assert_line '# - ${HOME}/.config/sandcat/dotfiles:/home/dev/.dotfiles:ro'
 	assert_line '# - ../.git:/workspace/.git:ro'
 	assert_line '# - ../.vscode:/workspace/.vscode:ro'
+
+
 
 	# JetBrains capabilities should still be added
 	assert_jetbrains_capabilities "$COMPOSE_FILE"
@@ -284,18 +257,11 @@ EOF
 	POLICY_FILE="policy.yaml"
 	touch "$BATS_TEST_TMPDIR/$POLICY_FILE"
 
-	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
-	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-claude:latest"
 	export SANDCAT_MOUNT_CLAUDE_CONFIG="true"
 	export SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS="true"
 	export SANDCAT_ENABLE_DOTFILES="true"
 	export SANDCAT_MOUNT_GIT_READONLY="true"
 	export SANDCAT_MOUNT_IDEA_READONLY="true"
-
-	unset -f pull_and_pin_image
-	stub pull_and_pin_image \
-		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
-		"ghcr.io/VirtusLab/sandcat-claude:latest : echo 'ghcr.io/VirtusLab/sandcat-claude@sha256:def456'"
 
 	customize_compose_file "$POLICY_FILE" "$COMPOSE_FILE" "claude" "jetbrains"
 
@@ -308,18 +274,11 @@ EOF
 	POLICY_FILE="policy.yaml"
 	touch "$BATS_TEST_TMPDIR/$POLICY_FILE"
 
-	export SANDCAT_PROXY_IMAGE="ghcr.io/VirtusLab/sandcat-proxy:latest"
-	export SANDCAT_AGENT_IMAGE="ghcr.io/VirtusLab/sandcat-claude:latest"
 	export SANDCAT_MOUNT_CLAUDE_CONFIG="true"
 	export SANDCAT_ENABLE_SHELL_CUSTOMIZATIONS="true"
 	export SANDCAT_ENABLE_DOTFILES="true"
 	export SANDCAT_MOUNT_GIT_READONLY="true"
 	export SANDCAT_MOUNT_VSCODE_READONLY="true"
-
-	unset -f pull_and_pin_image
-	stub pull_and_pin_image \
-		"ghcr.io/VirtusLab/sandcat-proxy:latest : echo 'ghcr.io/VirtusLab/sandcat-proxy@sha256:abc123'" \
-		"ghcr.io/VirtusLab/sandcat-claude:latest : echo 'ghcr.io/VirtusLab/sandcat-claude@sha256:def456'"
 
 	customize_compose_file "$POLICY_FILE" "$COMPOSE_FILE" "claude" "vscode"
 

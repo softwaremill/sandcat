@@ -47,7 +47,7 @@ edit() {
 			if [[ "$no_restart" == "true" ]]
 			then
 				echo "Compose file was modified, and you have containers running." | warning
-				echo "To pick up the changes and restart your containers, run: agentbox up -d" | warning
+				echo "To pick up the changes and restart your containers, run: sandcat compose up -d" | warning
 			else
 				echo "Compose file was modified. Restarting containers..." | info
 				"$SCT_LIBEXECDIR/compose/compose" up -d

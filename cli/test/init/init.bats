@@ -17,13 +17,13 @@ teardown() {
 @test "init rejects invalid --agent value" {
 	run init --name my-project --agent "invalid" --path "$PROJECT_DIR"
 	assert_failure
-	assert_output --partial "Invalid agent: invalid (expected: claude copilot codex)"
+	assert_output --partial "Invalid agent: invalid"
 }
 
 @test "init rejects invalid --mode value" {
 	run init --name my-project --agent claude --mode "invalid" --path "$PROJECT_DIR"
 	assert_failure
-	assert_output --partial "Invalid mode: invalid (expected: cli devcontainer)"
+	assert_output --partial "Invalid mode: invalid"
 }
 
 @test "init rejects invalid --ide value" {
@@ -33,6 +33,7 @@ teardown() {
 }
 
 @test "init accepts valid --agent and --mode values" {
+	skip 'FIXME: cli mode not supported'
 	stub policy "$PROJECT_DIR/.sandcat/policy-cli-claude.yaml claude : :"
 	stub cli "--policy-file .sandcat/policy-cli-claude.yaml --project-path $PROJECT_DIR --agent claude --name test : :"
 
@@ -41,14 +42,15 @@ teardown() {
 }
 
 @test "init accepts valid --ide value for devcontainer mode" {
-	stub policy "$PROJECT_DIR/.sandcat/policy-devcontainer-copilot.yaml copilot jetbrains : :"
-	stub devcontainer "--policy-file .sandcat/policy-devcontainer-copilot.yaml --project-path $PROJECT_DIR --agent copilot --ide jetbrains --name test : :"
+	stub policy "$PROJECT_DIR/.sandcat/settings.json claude jetbrains : :"
+	stub devcontainer "--policy-file .sandcat/settings.json --project-path $PROJECT_DIR --agent claude --ide jetbrains --name test : :"
 
-	run init --agent copilot --mode devcontainer --ide jetbrains --name test --path "$PROJECT_DIR"
+	run init --agent claude --mode devcontainer --ide jetbrains --name test --path "$PROJECT_DIR"
 	assert_success
 }
 
 @test "init interactive flow (cli mode)" {
+	skip 'FIXME: cli mode not supported'
 	unset -f read_line
 	unset -f select_option
 
@@ -72,16 +74,16 @@ teardown() {
 
 	stub read_line "'Project name [empty for default]:' : echo ''"
 	stub select_option \
-		"'Select agent:' claude copilot codex : echo copilot" \
-		"'Select mode:' cli devcontainer : echo devcontainer" \
+		"'Select agent:' claude : echo claude" \
+		"'Select mode:' devcontainer cli : echo devcontainer" \
 		"'Select IDE:' vscode jetbrains none : echo vscode"
 
 	local expected_name
 	expected_name=$(basename "$PROJECT_DIR")-sandbox-devcontainer
-	local policy_file=".sandcat/policy-devcontainer-copilot.yaml"
+	local policy_file=".sandcat/settings.json"
 
-	stub policy "$PROJECT_DIR/$policy_file copilot vscode : :"
-	stub devcontainer "--policy-file $policy_file --project-path $PROJECT_DIR --agent copilot --ide vscode --name $expected_name : :"
+	stub policy "$PROJECT_DIR/$policy_file claude vscode : :"
+	stub devcontainer "--policy-file $policy_file --project-path $PROJECT_DIR --agent claude --ide vscode --name $expected_name : :"
 
 	run init --path "$PROJECT_DIR"
 

@@ -28,8 +28,6 @@ services:
       - claude-history:/commandhistory
     working_dir: /workspaces/sandcat
     command: sleep infinity
-    stdin_open: true
-    tty: true
     environment:
       - CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
     depends_on:

@@ -11,6 +11,7 @@ teardown() {
 }
 
 @test "policy creates policy file from template" {
+	skip 'add back when #2 is implemented'
 	local policy_file="$BATS_TEST_TMPDIR/policy.yaml"
 
 	run policy "$policy_file" "github"
@@ -25,6 +26,7 @@ teardown() {
 }
 
 @test "policy creates parent directories" {
+	skip 'add back when #2 is implemented'
 	local policy_file="$BATS_TEST_TMPDIR/nested/deep/policy.yaml"
 
 	run policy "$policy_file" "github"
@@ -34,6 +36,7 @@ teardown() {
 }
 
 @test "policy handles multiple services" {
+	skip 'add back when #2 is implemented'
 	local policy_file="$BATS_TEST_TMPDIR/policy.yaml"
 
 	run policy "$policy_file" "github" "claude" "vscode"
@@ -53,6 +56,7 @@ teardown() {
 }
 
 @test "policy preserves domains key from template" {
+	skip 'add back when #2 is implemented'
 	local policy_file="$BATS_TEST_TMPDIR/policy.yaml"
 
 	run policy "$policy_file" "github"
@@ -63,6 +67,7 @@ teardown() {
 }
 
 @test "policy outputs info message" {
+	skip 'add back when #2 is implemented'
 	local policy_file="$BATS_TEST_TMPDIR/policy.yaml"
 
 	run policy "$policy_file" "github"

@@ -7,7 +7,7 @@ setup() {
 	source "$SCT_LIBEXECDIR/edit/compose"
 
 	mkdir -p "$BATS_TEST_TMPDIR/.devcontainer"
-	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/docker-compose.yml"
+	COMPOSE_FILE="$BATS_TEST_TMPDIR/.devcontainer/compose-all.yml"
 	touch "$COMPOSE_FILE"
 }
 

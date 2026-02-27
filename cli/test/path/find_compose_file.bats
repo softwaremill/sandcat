@@ -27,12 +27,12 @@ teardown() {
 	local test_root="$BATS_TEST_TMPDIR/repo"
 	mkdir -p "$test_root/.devcontainer"
 	mkdir -p "$test_root/.git"
-	touch "$test_root/.devcontainer/docker-compose.yml"
+	touch "$test_root/.devcontainer/compose-all.yml"
 
 	cd "$test_root"
 	run find_compose_file
 	assert_success
-	assert_output "$test_root/.devcontainer/docker-compose.yml"
+	assert_output "$test_root/.devcontainer/compose-all.yml"
 }
 
 @test "prefers \$SCT_PROJECT_DIR over .devcontainer" {
@@ -68,12 +68,12 @@ teardown() {
 	mkdir -p "$test_root/.devcontainer"
 	mkdir -p "$test_root/.git"
 	mkdir -p "$test_root/nested/deep"
-	touch "$test_root/.devcontainer/docker-compose.yml"
+	touch "$test_root/.devcontainer/compose-all.yml"
 
 	cd "$test_root/nested/deep"
 	run find_compose_file
 	assert_success
-	assert_output "$test_root/.devcontainer/docker-compose.yml"
+	assert_output "$test_root/.devcontainer/compose-all.yml"
 }
 
 @test "fails when repo root not found" {
